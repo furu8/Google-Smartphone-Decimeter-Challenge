@@ -16,29 +16,30 @@ Android GPSチームは、本チャレンジのデータセットにアシスタ
 ## フォルダ構成
 
 ```
-├── data                      <- データ関連
-│   ├── interim               <- 作成途中のデータ
-│   ├── processed             <- 学習に使うデータ
-│   ├── raw                   <- 生データ
-│   │   ├── test_images
-│   │   ├── train_images
-│   │   ├── test.csv
-│   │   ├── train.csv
-│   ├── submittion            <- 提出用データ
+├── data                                    <- データ関連
+│   ├── interim                             <- 作成途中のデータ
+│   ├── processed                           <- 学習に使うデータ
+│   ├── raw                                 <- 生データ
+│   │   ├── metadata
+│   │   ├── test
+│   │   ├── train
+│   │   ├── baseline_locations_test.csv     <- シンプルな方法で生成された推定座標（テスト）
+│   │   ├── baseline_locations_train.csv    <- シンプルな方法で生成された推定座標（学習）
+│   ├── submittion                          <- 提出用データ
 │   │   ├── sample_submission.csv
-├── scripts                   <- プログラム類
-│   ├── furu                  <- 古プログラム
-│   ├── gacky                 <- がっきープログラム
-│   ├── sample                <- サンプル
-│   │   ├── generate.py       <- データ作成（生データを分析しやすい整然データに→interimに保存）
-│   │   ├── analyze.py        <- 分析用スクリプト
-│   │   ├── run.py            <- 学習用スクリプト
-│   │   ├── models            <- モデル関連クラス
-│   │   │   ├── model.py      <- モデル基底クラス
-│   │   │   ├── model_lgb.py  <- LightGBMクラス
-│   │   │   ├── util.py       <- 汎用的処理クラス
-├── models                    <- 作成したモデル保存
-├── config                    <- 設定ファイル
-│   ├── features              <- 特徴ベクトル類
+├── scripts                                 <- プログラム類
+│   ├── furu                                <- 古プログラム
+│   ├── gacky                               <- がっきープログラム
+│   ├── sample                              <- サンプル
+│   │   ├── generate.py                     <- データ作成（生データを分析しやすい整然データに→interimに保存）
+│   │   ├── analyze.py                      <- 分析用スクリプト
+│   │   ├── run.py                          <- 学習用スクリプト
+│   │   ├── models                          <- モデル関連クラス
+│   │   │   ├── model.py                    <- モデル基底クラス
+│   │   │   ├── model_lgb.py                <- LightGBMクラス
+│   │   │   ├── util.py                     <- 汎用的処理クラス
+├── models                                  <- 作成したモデル保存
+├── config                                  <- 設定ファイル
+│   ├── features                            <- 特徴ベクトル類
 
 ```
