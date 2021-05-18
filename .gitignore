@@ -1,6 +1,6 @@
-config/
-data/
-models/
+config/*
+data/*
+models/*
 
 .DS_Store
 .vscode/

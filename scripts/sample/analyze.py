@@ -12,12 +12,12 @@ import seaborn as sns
 
 from models import Util
 
-# import warnings
-# warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
+import warnings
+warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
 # %%
 # 読込
-df = pd.read_csv('../data/interim/all.csv')
+df = pd.read_csv('../data/raw/train/2020-05-14-US-MTV-1/Pixel4/Pixel4_derived.csv')
 df.head()
 
 # %%[markdown]
