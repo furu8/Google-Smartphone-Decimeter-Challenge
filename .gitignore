@@ -1,3 +1,5 @@
 config/
 data/
 models/
+
+.DS_Store
