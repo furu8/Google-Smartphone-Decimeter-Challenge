@@ -2,6 +2,7 @@ config/*
 data/*
 models/*
 
+__pycache__/
 .DS_Store
 .vscode/
-__pychache__/
+.python-version

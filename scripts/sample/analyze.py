@@ -17,8 +17,11 @@ warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
 # %%
 # 読込
-df = pd.read_csv('../data/raw/train/2020-05-14-US-MTV-1/Pixel4/Pixel4_derived.csv')
-df.head()
+df_pd = pd.read_csv('../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/Pixel4_derived.csv')
+df_gt = pd.read_csv('../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/ground_truth.csv')
+
+display(df_pd.head())
+display(df_gt.head())
 
 # %%[markdown]
 # ## 初期の可視化
