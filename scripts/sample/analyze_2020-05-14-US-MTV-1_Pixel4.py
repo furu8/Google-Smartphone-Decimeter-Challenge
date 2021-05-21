@@ -15,10 +15,23 @@ from models import Util
 import warnings
 warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
+# # %%
+# # baseline_locations_test
+
+# base = pd.read_csv('../../data/raw/baseline_locations_test.csv')[['latDeg', 'lngDeg']]
+# samp = pd.read_csv('../../data/submission/sample_submission.csv')[['phone', 'millisSinceGpsEpoch']]
+
+# base_samp = pd.concat([samp, base], axis=1)
+
+# base_samp.to_csv('../../data/submission/sample_submission_baseline_locations_test.csv', index=False)
+
 # %%
 # 読込
 df_gt = pd.read_csv('../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/ground_truth.csv')
 df_pd = pd.read_csv('../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/Pixel4_derived.csv')
+
+display(df_gt.shape)
+display(df_pd.shape)
 
 display(df_gt.head())
 display(df_pd.head())
