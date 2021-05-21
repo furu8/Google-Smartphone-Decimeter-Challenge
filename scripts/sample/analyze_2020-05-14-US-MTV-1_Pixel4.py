@@ -12,6 +12,9 @@ import seaborn as sns
 
 from models import Util
 
+#最大表示行数を設定
+pd.set_option('display.max_rows', 500)
+
 import warnings
 warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
@@ -63,7 +66,7 @@ for col in df_gt.columns[5:]:
 for col in df_pd.columns[6:]:
     print(col)
     plt.figure(figsize=(20,4))
-    plt.plot(df_pd[col])
+    plt.plot(df_pd.loc[:1000, col])
     plt.show()
 
 # %%
@@ -103,7 +106,7 @@ display(df_pd_test.describe())
 for col in df_pd_test.columns[6:]:
     print(col)
     plt.figure(figsize=(20,4))
-    plt.plot(df_pd[col])
+    plt.plot(df_pd.loc[:1000, col])
     plt.show()
 
 # %%
@@ -115,24 +118,67 @@ plt.show()
 # ## 特徴量を追加
 
 # %%
-# 家族人数
-df['Family'] = df['SibSp'] + df['Parch']
+# millisSinceGpsEpochの差分
+df['dif_mSGE'] = df['millisSinceGpsEpoch'].diff().fillna(0) / 1000000 # ミリ秒
+df[['cum_mSGE']]= df['dif_mSGE'].cumsum()
+df[['cum_mSGE']].tail(100)
+
+# %%
+for col in df_pd_test.columns[6:]:
+    print(col)
+    plt.figure(figsize=(20,4))
+    plt.plot(df.loc[:1000, 'cum_mSGE'], df.loc[:1000, 'xSatPosM'])
+    plt.show()
+
+# %%
+# cum_mSGEの周期性
+plt.figure(figsize=(20,4))
+plt.plot(df.loc[:300, 'cum_mSGE'])
+plt.show()
+
+# %%
+import statsmodels.api as sm
+#  自己相関のグラフ
+fig = plt.figure(figsize=(20,4))
+ax1 = fig.add_subplot(211)
+fig = sm.graphics.tsa.plot_acf(df.loc[:300, 'cum_mSGE'], lags=40, ax=ax1)
+ax2 = fig.add_subplot(212)
+fig = sm.graphics.tsa.plot_pacf(df.loc[:300, 'cum_mSGE'], lags=40, ax=ax2)
+plt.show()
+
+seasonal_decompose_res = sm.tsa.seasonal_decompose(df.loc[:300, 'cum_mSGE'], freq=12)
+seasonal_decompose_res.plot()
+plt.show()
+# %%
+# cum_mSGEの周期性
+mSGE = -1
+for i, data in enumerate(df['cum_mSGE'].values):
+    if i == 300:
+        break
+    if data == mSGE:
+        continue
+    else:
+        print('index: ', i) # 周期性
+        mSGE = data
+
+"""メモ
+rollingで27や28を指定するより、cum_mSGEでgroupbyしたほうが良いか？
+"""
+
+# %%
+# correctedPrM = rawPrM + satClkBiasM - isrbM - ionoDelayM - tropoDelayMの確認
+
+df['correctedPrM'] = df['rawPrM'] + df['satClkBiasM'] - df['isrbM'] - df['ionoDelayM'] - df['tropoDelayM']
+df[['correctedPrM', 'latDeg', 'lngDeg']].head()
 
 # %%
 # ラベルエンコーディング
 lenc = LabelEncoder()
 
-lenc.fit(df['Sex'])
-df['Sex'] = pd.DataFrame(lenc.transform(df['Sex']))
+lenc.fit(df['signalType'])
+df['signalType_lenc'] = pd.DataFrame(lenc.transform(df['signalType']))
 
-lenc.fit(df['Embarked'])
-df['Embarked'] = pd.DataFrame(lenc.transform(df['Embarked']))
-
-df['Cabin'] = df['Cabin'].apply(lambda x:str(x)[0])
-lenc.fit(df['Cabin'])
-df['Cabin'] = pd.DataFrame(lenc.transform(df['Cabin']))
-
-display(df)
+display(df[['signalType', 'signalType_lenc']].head(30))
 display(df.info())
 display(df.describe())
 
@@ -140,39 +186,10 @@ display(df.describe())
 # ## 特徴量追加後の可視化
 
 # %%
-# 死亡者と生存者の違い
-df_s = df[df['data']=='train']
-cols = ['Family', 'Cabin']
-for col in cols:
-    print(col)
-    plt.figure(figsize=(4,3))
-    sns.countplot(x=col, data=df_s, hue=df_s['Survived'])
-    plt.legend( loc='upper right')
-    # plt.show()
-    plt.savefig(f'../figures/diffSurvived_{col}.png', facecolor="azure", bbox_inches='tight', pad_inches=0)
+plt.figure(figsize=(20,4))
+plt.plot(df.loc[:300, 'correctedPrM'])
+plt.show()
 
-# %%
-# trainとtestの違い
-cols = ['Family', 'Cabin']
-for col in cols:
-    print(col)
-    plt.figure(figsize=(4,3))
-    sns.countplot(x=col, data=df, hue=df['data'])
-    plt.legend( loc='upper right')
-    # plt.show()
-    plt.savefig(f'../figures/diffTrainTest_{col}.png', facecolor="azure", bbox_inches='tight', pad_inches=0)
-
-# %%[markdown]
-# ## 保存
-# %%
-# データ保存
-df.to_csv('../data/processed/all.csv')
-
-# %%
-# 特徴量
-df = df.drop(['PassengerId', 'data', 'Survived'], axis=1)
-df
-# %%
-# 特徴量保存
-Util.dump(df.columns, '../config/features/all.pkl')
-# %%
+plt.figure(figsize=(20,4))
+plt.plot(df.loc[:300, 'cum_mSGE'], df.loc[:300, 'correctedPrM'])
+plt.show()
