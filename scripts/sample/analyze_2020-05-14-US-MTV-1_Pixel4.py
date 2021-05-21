@@ -63,7 +63,7 @@ for col in df_gt.columns[5:]:
 for col in df_pd.columns[6:]:
     print(col)
     plt.figure(figsize=(20,4))
-    plt.scatter(df_pd[col])
+    plt.plot(df_pd[col])
     plt.show()
 
 # %%
@@ -80,6 +80,37 @@ df = pd.merge(df_pd, df_gt.iloc[:, 2:], on='millisSinceGpsEpoch')
 print(df.columns)
 print(df.shape)
 df.head()
+
+# %%
+# 読込
+df_pd_test = pd.read_csv('../../data/raw/test/2020-05-15-US-MTV-1/Pixel4/Pixel4_derived.csv')
+
+display(df_pd_test.shape)
+display(df_pd_test.head())
+
+# %%
+# 欠損値確認
+display(df_pd_test.info())
+
+# %%
+# 基本統計値
+display(df_pd_test.describe())
+
+# %%[markdown]
+# ## 初期の可視化
+
+# %%
+for col in df_pd_test.columns[6:]:
+    print(col)
+    plt.figure(figsize=(20,4))
+    plt.plot(df_pd[col])
+    plt.show()
+
+# %%
+# millisSinceGpsEpochのヒストグラム
+plt.hist(df_pd_test['millisSinceGpsEpoch'], bins=50)
+plt.show()
+
 # %%[markdown]
 # ## 特徴量を追加
 
