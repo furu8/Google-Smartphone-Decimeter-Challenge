@@ -19,16 +19,6 @@ pd.set_option('display.max_rows', 500)
 import warnings
 warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
-# # %%
-# # baseline_locations_test
-
-# base = pd.read_csv('../../data/raw/baseline_locations_test.csv')[['latDeg', 'lngDeg']]
-# samp = pd.read_csv('../../data/submission/sample_submission.csv')[['phone', 'millisSinceGpsEpoch']]
-
-# base_samp = pd.concat([samp, base], axis=1)
-
-# base_samp.to_csv('../../data/submission/sample_submission_baseline_locations_test.csv', index=False)
-
 # %%[markdown]
 # ## データ確認
 # %%

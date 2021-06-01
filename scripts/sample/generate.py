@@ -5,6 +5,22 @@ from sklearn.preprocessing import LabelEncoder
 from IPython.core.display import display
 import glob as gb
 
+# # %%
+# # baseline_locations_test
+
+# base = pd.read_csv('../../data/raw/baseline_locations_test.csv')[['latDeg', 'lngDeg']]
+# samp = pd.read_csv('../../data/submission/sample_submission.csv')[['phone', 'millisSinceGpsEpoch']]
+
+# base_samp = pd.concat([samp, base], axis=1)
+
+# # display(base_samp)
+# # base_samp.to_csv('../../data/submission/sample_submission_baseline_locations_test.csv', index=False)
+
+# # trainデータの件数
+# base_train = pd.read_csv('../../data/raw/baseline_locations_train.csv')
+# display(base_train.shape)
+# display(base_train)
+
 # %%[markdown]
 # ## データセット作成
 
@@ -27,23 +43,40 @@ p4_dr_train_path_list = gb.glob(p4_dr_train_path)
 print(p4_gt_train_path_list)
 print(p4_dr_train_path_list)
 # %%
-# pixel4のground_truth読込
+# pixel4のground_truth読込(学習データ)
 p4_gt_train_df = load_df(p4_gt_train_path_list)
 
 display(p4_gt_train_df.shape)
 display(p4_gt_train_df.head())
 
 # %%
-# pixel4のderived読込
+# pixel4のderived読込(学習データ)
 p4_dr_train_df = load_df(p4_dr_train_path_list)
 
 display(p4_dr_train_df.shape)
 display(p4_dr_train_df.head())
+display(p4_dr_train_df.tail())
+
+# %%
+p4_dr_test_path = '../../data/raw/test/*/Pixel4/Pixel4_derived.csv'
+p4_dr_test_path_list = gb.glob(p4_dr_train_path)
+
+print(p4_dr_test_path_list)
+# %%
+# pixel4のderived読込(テストデータ)
+p4_dr_test_df = load_df(p4_dr_test_path_list)
+
+display(p4_dr_test_df.shape)
+display(p4_dr_test_df.head())
 
 # %%
 # 欠損確認
-display(train_df.info())
-display(test_df.info())
+display(p4_dr_train_df.info())
+display(p4_dr_test_df.info())
+
+"""メモ
+
+"""
 
 # %%
 # 統計値確認
