@@ -2,15 +2,16 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
-from IPython.core.display import display
+from IPython.core.display import display, display_pdf
 import glob as gb
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# 最大表示列数の指定（ここでは50列を指定）
-pd.set_option('display.max_columns', 200)
-# 最大表示行数の指定（ここでは50行を指定）
-pd.set_option('display.max_rows', 100)
+#最大表示行数を設定
+pd.set_option('display.max_rows', 500)
+
+import warnings
+warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
 # # %%
 # # baseline_locations_test
@@ -84,9 +85,10 @@ display(p4_dr_test_df.tail())
 display(p4_dr_train_df.info())
 display(p4_dr_test_df.info())
 
-"""メモ
-Pixel4に関しては学習データ、テストデータともに欠損なし。
-"""
+# %%
+# 統計値確認
+display(p4_dr_train_df.describe())
+display(p4_dr_test_df.describe())
 
 # %%
 # collectionNameごとにデータ数を確かめる
@@ -119,37 +121,20 @@ plt.legend()
 plt.show()  
 
 # %%
-# 統計値確認
-display(train_df.describe())
-display(test_df.describe())
+# groupbyおまけ
+mean_train_df = p4_dr_train_df.groupby('millisSinceGpsEpoch').mean()
+mean_test_df = p4_dr_test_df.groupby('millisSinceGpsEpoch').mean()
 
-# %%
-# 結合
-df = pd.concat([train_df, test_df], axis=0, ignore_index=True, sort=False)
-df['Survived'] = df['Survived'].fillna(-1)
+display(mean_train_df.shape)
+display(mean_test_df.shape)
+display(mean_train_df)
+display(mean_train_df)
 
-display(df)
-display(df.info())
-display(df.describe())
-
-# %%
-# 欠損補完
-df['Age'] = df['Age'].fillna(df['Age'].mean()) # 29.881137667304014
-df['Embarked'] = df['Embarked'].fillna(df['Embarked'].value_counts().idxmax()) # S
-df['Fare'] = df['Fare'].fillna(df['Fare'].mean()) # 33.295479281345564
- 
-# カラム削除
-df = df.drop(['Name', 'Ticket'], axis=1)
-
-# trainとtest
-df.loc[df['Survived']!=-1, 'data'] = 'train'
-df.loc[df['Survived']==-1, 'data'] = 'test'
-
-display(df)
-display(df.info())
-display(df.describe())
+"""
+平均、最大、最小など、好みで中間データをここで吐き出しても良い
+"""
 
 # %%
 # 保存
-df.to_csv('../data/interim/all.csv', index=False)
-# %%
+p4_dr_train_df.to_csv('../../data/interim/train/all_Pixel4_derived.csv', index=False)
+p4_dr_test_df.to_csv('../../data/interim/test/all_Pixel4_derived.csv', index=False)
