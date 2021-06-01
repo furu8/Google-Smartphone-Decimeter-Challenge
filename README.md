@@ -13,13 +13,18 @@ Android GPSチームは、本チャレンジのデータセットにアシスタ
 
 このチャレンジでは、GPS衛星からの信号、加速度計の測定値、ジャイロスコープの測定値など、携帯電話の位置を決定するのに役立つさまざまな機器からのデータを提供します。この課題では、車線レベルのマッピングなどの後処理に重点を置いて設計されているため、将来的にはルート上のデータを利用して、可能な限り正確な位置を生成することができます。また、複数の機種で構成される路線も多いため、隣接する機種の情報を利用して推定を行うこともできます。一般的なGNSS測位アルゴリズムの開発を促進するため、携帯電話内のGPSチップセットの位置情報は提供されません。これは、携帯電話のモデルなどによって異なるメーカー独自のアルゴリズムに基づいているためです。データ収集プロセスの詳細については、本稿をご参照ください。このデータセット／課題に基づいて作品を発表する場合は、競技規則に従って適切に引用してください。
 
-## メモ
+# 古濵メモ
+
+## カラム関連
 
 - hDop,vDop：水平方向と垂直方向の測定誤差のこと
+
+## ドメイン知識関連
+
 - GNSSコンステレーションタイプ：GNSSの種類（参考URL：GNSSとは参照）
     - 数値変換には、metadata/constellation_type_mapping.csvを用いている
 
-## 参考URL
+## 参考
 
 ### GNSSとは
 - https://www.keisokuten.jp/static/sp_gnss.html
@@ -27,7 +32,7 @@ Android GPSチームは、本チャレンジのデータセットにアシスタ
 ### GPSとは
 - https://www.furuno.com/jp/gnss/technical/tec_what_gps#:~:text=DOP,%E7%B2%BE%E5%BA%A6%E3%81%8C%E9%AB%98%E3%81%8F%E3%81%AA%E3%82%8A%E3%81%BE%E3%81%99%E3%80%82
 
-## フォルダ構成
+# フォルダ構成
 
 ```
 ├── data                                    <- データ関連
@@ -60,3 +65,42 @@ Android GPSチームは、本チャレンジのデータセットにアシスタ
 │   ├── features                            <- 特徴ベクトル類
 
 ```
+
+# 環境構築
+
+## 前提
+
+- 分析用の環境にはanaconda3使う
+- pythonのバージョンは3.7.9を使う
+
+## windows
+
+1. [1]からAnaconda3-2020.11-Windows-x86=64.exeをダウンロードする
+    - **ぶっちゃけ、anaconda入ってればなんでもいい**
+
+2. インストーラーをNext押し続け（pathを通さないことを勧める）
+3. タスクバーの虫眼鏡からAnaconda Promptと検索し、 起動する（以下、ターミナル=Anaconda Prompt）
+
+    (なお、base環境はanaconda3の基底環境なので基本この環境で実行しない)
+
+    ```
+    (base) C:\Users\furuhama\OneDrive\document\Research\ADforDrone>
+    ```
+
+4. [2]などを参考に、ターミナルで`conda env create -n py37 -f py37env.yml`として、分析用の仮想環境を構築する
+    - py37の部分は仮想環境の名前なので、お好みで
+    - py37env.ymlはREADME.mdと同じディレクトリ階層にある
+
+5. 作成した仮想環境に`conda activate py37`で入る
+    ```
+    (py37) C:\Users\furuhama\OneDrive\document\Research\ADforDrone>
+    ```
+6. 以上で準備完了
+
+## 参考
+
+- [1] Anaconda installer archive
+  - https://repo.anaconda.com/archive/
+
+- [2]【初心者向け】Anacondaで仮想環境を作ってみる
+  - https://qiita.com/ozaki_physics/items/985188feb92570e5b82d
