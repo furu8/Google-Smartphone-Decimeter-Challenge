@@ -3,17 +3,42 @@ import os
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from IPython.core.display import display
+import glob as gb
 
 # %%[markdown]
 # ## データセット作成
 
 # %%
-# 読込
-train_df = pd.read_csv('../data/raw/train.csv')
-test_df = pd.read_csv('../data/raw/test.csv')
+# 各種関数
+def load_df(path_list):
+    df = pd.DataFrame()
+    for path in path_list:
+        onedf = pd.read_csv(path)
+        print(len(onedf))
+        df = pd.concat([df, onedf], axis=0)
+    
+    return df.reset_index(drop=True)
+# %%
+p4_gt_train_path = '../../data/raw/train/*/Pixel4/ground_truth.csv'
+p4_dr_train_path = '../../data/raw/train/*/Pixel4/Pixel4_derived.csv'
+p4_gt_train_path_list = gb.glob(p4_gt_train_path)
+p4_dr_train_path_list = gb.glob(p4_dr_train_path)
 
-display(train_df.head())
-display(test_df.head())
+print(p4_gt_train_path_list)
+print(p4_dr_train_path_list)
+# %%
+# pixel4のground_truth読込
+p4_gt_train_df = load_df(p4_gt_train_path_list)
+
+display(p4_gt_train_df.shape)
+display(p4_gt_train_df.head())
+
+# %%
+# pixel4のderived読込
+p4_dr_train_df = load_df(p4_dr_train_path_list)
+
+display(p4_dr_train_df.shape)
+display(p4_dr_train_df.head())
 
 # %%
 # 欠損確認
