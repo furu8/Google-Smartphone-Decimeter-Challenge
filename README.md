@@ -39,7 +39,7 @@ Android GPSチームは、本チャレンジのデータセットにアシスタ
 │   │   ├── train
 │   │   ├── baseline_locations_test.csv     <- シンプルな方法で生成された推定座標（テスト）
 │   │   ├── baseline_locations_train.csv    <- シンプルな方法で生成された推定座標（学習）
-│   ├── submittion                          <- 提出用データ
+│   ├── submission                          <- 提出用データ
 │   │   ├── sample_submission.csv
 ├── scripts                                 <- プログラム類
 │   ├── furu                                <- 古プログラム
