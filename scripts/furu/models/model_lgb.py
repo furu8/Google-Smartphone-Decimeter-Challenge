@@ -1,7 +1,5 @@
 import os
-import numpy as np
-import pandas as pd
-import lightgbm as lgb
+import optuna.integration.lightgbm as lgb
 from .model import Model
 from .util import Util
 
@@ -22,6 +20,14 @@ class ModelLGB(Model):
         # 学習
         if isvalid:
             self.model = lgb.train(params, lgb_train, valid_sets=lgb_valid)
+            best_params, tuning_history = dict(), list()
+            booster = lgb.train(params, lgb_train, valid_sets=lgb_valid,
+                                verbose_eval=0,
+                                best_params=best_params,
+                                tuning_history=tuning_history)
+ 
+            print('Best Params:', best_params)
+            print('Tuning history:', tuning_history)
         else:
             self.model = lgb.train(params, lgb_train)
 
