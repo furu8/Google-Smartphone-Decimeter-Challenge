@@ -123,6 +123,40 @@ plt.legend()
 plt.show()  
 
 # %%
+# merge字の欠損値確認
+checknull = pd.merge(p4_dr_train_df, p4_gt_train_df.iloc[:, 2:], 
+                        on='millisSinceGpsEpoch', 
+                        how='left')
+
+onechecknull = checknull[checknull['collectionName']=='2020-05-21-US-MTV-1']
+display(onechecknull)
+
+# ground_truthがない時間（2020-05-21-US-MTV-1の中で）
+gt_list = onechecknull.loc[onechecknull['latDeg'].isnull(), 'millisSinceGpsEpoch'].unique()
+gt_list
+# onechecknull.to_csv('../../data/interim/train/checknull_merge_2020-05-21-US-MTV-1.csv', index=False)
+# %%
+p4_train_df = pd.merge_asof(p4_dr_train_df.sort_values('millisSinceGpsEpoch'), 
+                            p4_gt_train_df.iloc[:, 2:].sort_values('millisSinceGpsEpoch'), 
+                            on='millisSinceGpsEpoch',
+                            direction='nearest',
+                            # tolerance=30
+                            )
+print(p4_dr_train_df.shape)
+print(p4_train_df.shape)
+
+onep4_train_df = p4_train_df[p4_train_df['collectionName']=='2020-05-21-US-MTV-1']
+display(onep4_train_df)
+
+display(p4_train_df.loc[(p4_train_df['collectionName']=='2020-05-21-US-MTV-1') & p4_train_df['latDeg'].isnull(), 'millisSinceGpsEpoch'].unique())
+display(p4_train_df.loc[(p4_train_df['millisSinceGpsEpoch'].isin(gt_list))])
+# onep4_train_df.to_csv('../../data/interim/train/checknull_mergeasof_2020-05-21-US-MTV-1.csv', index=False)
+# %%
+print(len(p4_dr_train_df['millisSinceGpsEpoch'].unique()))
+print(len(p4_train_df['millisSinceGpsEpoch'].unique()))
+p4_train_df.info()
+
+# %%
 # groupbyおまけ
 mean_train_df = p4_dr_train_df.groupby('millisSinceGpsEpoch').mean()
 mean_test_df = p4_dr_test_df.groupby('millisSinceGpsEpoch').mean()
@@ -135,16 +169,8 @@ display(mean_train_df)
 """
 平均、最大、最小など、好みで中間データをここで吐き出しても良い
 """
-# %%
-p4_train_df = pd.merge(p4_dr_train_df, p4_gt_train_df, on='millisSinceGpsEpoch', how='left')
-print(p4_dr_train_df.shape)
-print(p4_train_df.shape)
-# %%
-print(len(p4_dr_train_df['millisSinceGpsEpoch'].unique()))
-print(len(p4_train_df['millisSinceGpsEpoch'].unique()))
-p4_train_df.info()
 
 # %%
 # 保存
-p4_dr_train_df.to_csv('../../data/interim/train/all_Pixel4_derived.csv', index=False)
-p4_dr_test_df.to_csv('../../data/interim/test/all_Pixel4_derived.csv', index=False)
+# p4_dr_train_df.to_csv('../../data/interim/train/all_Pixel4_derived.csv', index=False)
+# p4_dr_test_df.to_csv('../../data/interim/test/all_Pixel4_derived.csv', index=False)
