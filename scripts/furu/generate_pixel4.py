@@ -1,6 +1,7 @@
 # %%
 import numpy as np
 import pandas as pd
+from pandas.core.reshape.merge import merge_asof
 from sklearn.preprocessing import LabelEncoder
 from IPython.core.display import display
 import glob as gb
@@ -169,6 +170,21 @@ display(mean_train_df)
 """
 平均、最大、最小など、好みで中間データをここで吐き出しても良い
 """
+
+# %%
+print(mean_train_df.shape)
+print(p4_gt_train_df.shape)
+
+merge = pd.merge(mean_train_df, p4_gt_train_df.sort_values('millisSinceGpsEpoch'), on='millisSinceGpsEpoch', how='left')
+mergeasof = pd.merge_asof(mean_train_df, p4_gt_train_df.sort_values('millisSinceGpsEpoch'), on='millisSinceGpsEpoch', direction='nearest')
+
+print(merge.shape)
+print(mergeasof.shape)
+# plt.scatter(p4_gt_train_df['latDeg'], p4_gt_train_df['lngDeg'])
+# plt.scatter(mergeasof['latDeg'], mergeasof['lngDeg'])
+
+# merge.to_csv('../../data/interim/train/checknull_merge_groupby.csv', index=False)
+# mergeasof.to_csv('../../data/interim/train/checknull_mergeasof_groupby.csv', index=False)
 
 # %%
 # 保存
