@@ -1,7 +1,7 @@
 # %%
 import numpy as np
 import pandas as pd
-from pandas.core.reshape.merge import merge_asof
+
 from sklearn.preprocessing import LabelEncoder
 from IPython.core.display import display
 import glob as gb
@@ -124,7 +124,13 @@ plt.legend()
 plt.show()  
 
 # %%
-# merge字の欠損値確認
+# sort_valuesの確認
+a = p4_dr_train_df[p4_dr_train_df['collectionName']=='2020-05-21-US-MTV-1'].reset_index(drop=True)
+b = p4_dr_train_df[p4_dr_train_df['collectionName']=='2020-05-21-US-MTV-1'].reset_index(drop=True)
+b = b.reset_index(drop=False)
+
+# %%
+# merge時の欠損値確認
 checknull = pd.merge(p4_dr_train_df, p4_gt_train_df.iloc[:, 2:], 
                         on='millisSinceGpsEpoch', 
                         how='left')
@@ -152,6 +158,10 @@ display(onep4_train_df)
 display(p4_train_df.loc[(p4_train_df['collectionName']=='2020-05-21-US-MTV-1') & p4_train_df['latDeg'].isnull(), 'millisSinceGpsEpoch'].unique())
 display(p4_train_df.loc[(p4_train_df['millisSinceGpsEpoch'].isin(gt_list))])
 # onep4_train_df.to_csv('../../data/interim/train/checknull_mergeasof_2020-05-21-US-MTV-1.csv', index=False)
+
+# %%
+p4_train_df
+# p4_train_df.to_csv('../../data/interim/train/cv_pixel4.csv', index=False)
 # %%
 print(len(p4_dr_train_df['millisSinceGpsEpoch'].unique()))
 print(len(p4_train_df['millisSinceGpsEpoch'].unique()))
