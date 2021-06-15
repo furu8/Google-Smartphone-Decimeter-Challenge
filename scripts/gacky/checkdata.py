@@ -119,16 +119,6 @@ def gnss_log_to_dataframes(path):
 
     return results
 # %%
-dfs = gnss_log_to_dataframes(data_path + 'Pixel4_GnssLog.txt')
-# %%
-dfs
-# %%
-sample_df = pd.read_csv("../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/Pixel4_derived.csv")
-# %%
-display(sample_df.shape)
-# %%
-dfs["UncalGyro"].groupby('utcTimeMillis').mean()
-# %%
 ## 決まった分を日付限定してやっていきましょう
 data_path = "../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/"
 beta_tr_p4 = pd.read_csv(data_path + "Pixel4_derived.csv")
@@ -142,9 +132,23 @@ len(beta_p4_merge["millisSinceGpsEpoch"].unique())
 # %%
 beta_p4_merge.info()
 # %%
+dfs = gnss_log_to_dataframes(data_path + 'Pixel4_GnssLog.txt')
+# %%
+dfs.keys()
+# %%
+sample_df = pd.read_csv("../../data/raw/train/2020-05-14-US-MTV-1/Pixel4/Pixel4_derived.csv")
+# %%
+display(sample_df.shape)
+# %%
+dfs["UncalGyro"].groupby('utcTimeMillis').mean()
+# %%
 beta_p4_UncalAccel = dfs["UncalAccel"]
 # %%
 len(beta_p4_UncalAccel["utcTimeMillis"].unique())
+# %%
+beta_p4_UncalAccel["utcTimeMillis"].plot()
+# %%
+beta_p4_UncalAccel.info()
 # %%
 ## あっとるんかわからんけどUTCとGPSを変換するらしいコードをパクるよ(PHP製)
 from math import fmod
@@ -180,12 +184,16 @@ beta_p4_merge["millisSinceGpsEpoch"].head(50)
 beta_p4_UncalAccel["utcTimeMillis"].plot()
 # %%
 dfs["UncalGyro"]["utcTimeMillis"].plot()
+dfs["UncalGyro"].info()
 # %%
 dfs["UncalMag"]["utcTimeMillis"].plot()
+dfs["UncalMag"].info()
 # %%
 dfs["Status"]["UnixTimeMillis"].plot()
+dfs["Status"].info()
 # %%
 dfs["Raw"]["utcTimeMillis"].plot()
+dfs["Raw"].info()
 # %%
 dfs["Fix"]["UnixTimeMillis"].plot()
 # %%
@@ -197,4 +205,32 @@ theta_p4_gt = pd.concat([beta_gt_p4, alpha_p4_gt], ignore_index=True)
 theta_p4_merge = pd.merge_asof(theta_p4_tr, theta_p4_gt, on="millisSinceGpsEpoch", by=["collectionName", "phoneName"], direction="nearest", tolerance=100000)
 # %%
 theta_p4_merge
+# %%
+## 結合するためのコードを書きます
+## とりあえず端末ごとに日毎の取得データとground_truthをくっつけますね
+## 端末リストとか共通のパスはハードコーディングで勘弁してくれ
+phone_list = ["Pixel4", "Pixel4XL", "Pixel4Modded", "Pixel4XLModded", "Mi8", "SamsungS20Ultra", "Pixel5"]
+base_path = "../../data/raw/train/"
+dfs = dict()
+import os
+for root, dirs, files in os.walk(base_path):
+    csvs = filter(lambda f: f.endswith(".csv"), files)
+    gt = None
+    get_data = None
+    for csv in csvs:
+        if gt is None:
+            gt = pd.read_csv(os.path.join(root, csv))
+        elif get_data is None:
+            get_data = pd.read_csv(os.path.join(root, csv))
+        if gt is not None and get_data is not None:
+            try:
+                merge_data = pd.merge_asof(get_data, gt, on="millisSinceGpsEpoch", by=["collectionName", "phoneName"], direction="nearest", tolerance=100000, allow_exact_matches=True)
+                dfs[os.path.join(root, csv).split('\\')[1]] = pd.concat([dfs[os.path.join(root, csv).split('\\')[1]], merge_data], ignore_index=True)
+            except KeyError:
+                dfs[os.path.join(root, csv).split('\\')[1]] = merge_data
+            gt = get_data = None
+# %%
+dfs.keys()
+# %%
+dfs["Pixel4"]
 # %%
