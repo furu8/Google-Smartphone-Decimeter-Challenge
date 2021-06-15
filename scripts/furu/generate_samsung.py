@@ -39,12 +39,12 @@ def merge_df(df1, df2):
                     tolerance=100000)
 
 # %%[markdown]
-# ### Mi8
+# ### SamsusgS20Ultra
 
 # %%
 # パス
-gt_train_path = '../../data/raw/train/*/Mi8/ground_truth.csv'
-dr_train_path = '../../data/raw/train/*/Mi8/Mi8_derived.csv'
+gt_train_path = '../../data/raw/train/*/SamsungS20Ultra/ground_truth.csv'
+dr_train_path = '../../data/raw/train/*/SamsungS20Ultra/SamsungS20Ultra_derived.csv'
 gt_train_path_list = gb.glob(gt_train_path)
 dr_train_path_list = gb.glob(dr_train_path)
 
@@ -63,7 +63,7 @@ display(train_df.info())
 
 # %%
 # パス
-dr_test_path = '../../data/raw/test/*/Mi8/Mi8_derived.csv'
+dr_test_path = '../../data/raw/test/*/SamsungS20Ultra/SamsungS20Ultra_derived.csv'
 dr_test_path_list = gb.glob(dr_test_path)
 
 print(dr_test_path_list)
@@ -117,5 +117,5 @@ display(mean_train_df)
 
 # %%
 # 保存
-train_df.to_csv('../../data/interim/train/all_Mi8_derived.csv', index=False)
-test_df.to_csv('../../data/interim/test/all_Mi8_derived.csv', index=False)
+train_df.to_csv('../../data/interim/train/all_SamsungS20Ultra_derived.csv', index=False)
+test_df.to_csv('../../data/interim/test/all_SamsungS20Ultra_derived.csv', index=False)
