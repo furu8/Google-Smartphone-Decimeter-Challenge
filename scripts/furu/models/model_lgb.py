@@ -1,5 +1,6 @@
 import os
-import optuna.integration.lightgbm as lgb
+import lightgbm as lgb
+# import optuna.integration.lightgbm as lgb
 from .model import Model
 from .util import Util
 
