@@ -1,7 +1,5 @@
 # %%
-from io import RawIOBase
 import numpy as np
-from numpy.matrixlib import defmatrix
 import pandas as pd
 
 from IPython.core.display import display
@@ -43,22 +41,18 @@ def load_gnss_log(path_list):
 
     paths = np.sort(np.array(path_list))
     for path in paths:
-        dfs = gnss_log_to_dataframes(path, gnss_section_names)
-        dfs = make_df(dfs)
-        dfs = dfs[dfs['col_num']!=0]
-        for df in dfs['dataframe'].values:
-            pass
+        df_dict = gnss_log_to_dataframes(path, gnss_section_names) # gnss_log.txtをdf化
+        df_dict = change_dfs_unix2gps(df_dict) # 時間変換(utc->gps)
+        df_dict = extract_gnss_log(df_dict) # 空のdf除去
+        raw_df = df_dict['Raw']
+        df_dict.pop('Raw')
+        for key in df_dict.keys():
+            raw_df = pd.merge_asof(raw_df, df_dict[key],
+                                    on='millisSinceGpsEpoch',
+                                    direction='nearest',
+                                    tolerance=1000) # 1sec
+        print(raw_df.shape)
 
-        # gyr_df, acc_df, mag_df, fix_df, sts_df, raw_df, otg_df = change_unix2gps(dfs)
-        
-        # df = pd.merge_asof(dfs['UncalGyro'], dfs['UncalAccel'])
-        # df = pd.merge_asof(df, dfs['UncalMag'])
-        # df = pd.merge_asof(df, dfs['Fix'])
-        # df = pd.merge_asof(df, dfs['Status'])
-        # df = pd.merge_asof(df, dfs['Raw'])
-        # df = pd.merge_asof(df, dfs['OrientationDeg'])
-        # display(df)
-        # display(df.info())
 
 def make_df(dfs):
     df = pd.DataFrame()
@@ -69,21 +63,24 @@ def make_df(dfs):
 def check_emptydf(dfs):
     return [len(dfs[key].columns) for key in dfs.keys()]
 
-def change_df_unix2gps(dfs):
-    gyr_df = change_unix2gps(dfs['UncalGyro'], 'utcTimeMillis')
-    acc_df = change_unix2gps(dfs['UncalAccel'], 'utcTimeMillis')
-    mag_df = change_unix2gps(dfs['UncalMag'], 'utcTimeMillis')
-    fix_df = change_unix2gps(dfs['Fix'], 'UnixTimeMillis')
-    sts_df = change_unix2gps(dfs['Status'], 'UnixTimeMillis')
-    raw_df = change_unix2gps(dfs['Raw'], 'utcTimeMillis')
-    otg_df = change_unix2gps(dfs['OrientationDeg'], 'utcTimeMillis')
+def change_dfs_unix2gps(dfs):
+    dfs['UncalGyro'] = change_df_unix2gps(dfs['UncalGyro'], 'utcTimeMillis')
+    dfs['UncalAccel'] = change_df_unix2gps(dfs['UncalAccel'], 'utcTimeMillis')
+    dfs['UncalMag'] = change_df_unix2gps(dfs['UncalMag'], 'utcTimeMillis')
+    dfs['Fix'] = change_df_unix2gps(dfs['Fix'], 'UnixTimeMillis')
+    dfs['Status'] = change_df_unix2gps(dfs['Status'], 'UnixTimeMillis')
+    dfs['Raw'] = change_df_unix2gps(dfs['Raw'], 'utcTimeMillis')
+    dfs['OrientationDeg'] = change_df_unix2gps(dfs['OrientationDeg'], 'utcTimeMillis')
 
-    return [gyr_df, acc_df, mag_df, fix_df, sts_df, raw_df, otg_df]
+    return dfs
 
-def change_unix2gps(df, timecol):
-    df = df.rename(columns={timecol: 'millisSinceGpsEpoch'})
-    
+def extract_gnss_log(gnss_log_df_dict):
+    return {key: gnss_log_df for key, gnss_log_df in gnss_log_df_dict.items() if not gnss_log_df.empty}
+
+
+def change_df_unix2gps(df, timecol):
     if not df.empty:
+        df = df.rename(columns={timecol: 'millisSinceGpsEpoch'})
         df['millisSinceGpsEpoch'] = df['millisSinceGpsEpoch'].apply(unix2gps)
     
     return df
@@ -153,11 +150,117 @@ def getleaps():
 
 # %%[markdown]
 # ## Mi8
-# ### _derived, ground_truth
 
 # %%
 # phone
 phone_name = 'Mi8'
+
+# %%[markdown]
+# ### gnss log
+
+# %%
+# gnss log path
+gnss_train_path = f'../../data/raw/train/*/{phone_name}/{phone_name}_GnssLog.txt'
+gnss_test_path = f'../../data/raw/test/*/{phone_name}/{phone_name}_GnssLog.txt'
+
+gnss_train_path_list = gb.glob(gnss_train_path)
+gnss_test_path_list = gb.glob(gnss_train_path)
+
+print(gnss_train_path_list)
+print(gnss_test_path_list)
+
+# %%
+# gnss log data
+load_gnss_log(gnss_train_path_list)
+
+# %%
+# gnss log 確認用
+gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
+path = '../../data/raw/train/2020-07-17-US-MTV-2/Mi8/Mi8_GnssLog.txt'
+df_dict = gnss_log_to_dataframes(path, gnss_section_names)
+# %%
+# UncalAccel
+df_dict['UncalAccel'][df_dict['UncalAccel']['utcTimeMillis'].diff()<0]
+
+
+# %%
+# UncalMag
+df_dict['UncalMag'][df_dict['UncalMag']['utcTimeMillis'].diff()<0]
+
+# %%
+# UncalGyro
+
+# 3801レコード目で時間が逆転してる
+df_dict['UncalGyro'][df_dict['UncalGyro']['utcTimeMillis'].diff()<0]
+df_dict['UncalGyro'].iloc[3799:3805]
+
+# %%
+# Fix
+df_dict['Fix'][df_dict['Fix']['UnixTimeMillis'].diff()<0]
+
+# %%
+# Status
+df_dict['Status']
+
+# %%
+# Raw
+df_dict['Raw'].info()
+
+# %%
+# OrientationDeg
+df_dict['OrientationDeg']
+
+# %%
+# 全欠損と結合
+# カラムがあるFixは全欠損で結合される
+null1_df = pd.merge_asof(df_dict['Status'], df_dict['Fix'], 
+                        on='UnixTimeMillis',
+                        direction='nearest',
+                        tolerance=10000)
+
+# カラムがないOritentationDegはエラー
+# null2_df = pd.merge_asof(df_dict['UncalMag'], df_dict['OrientationDeg'], 
+#                         on='utcTimeMillis',
+#                         direction='nearest',
+#                         tolerance=10000)
+
+# %%
+# Rawのmerger_asof
+raw1_df = pd.merge_asof(df_dict['Raw'], df_dict['UncalMag'], 
+                    on='utcTimeMillis',
+                    direction='nearest',
+                    tolerance=10000)
+raw2_df = pd.merge_asof(df_dict['UncalMag'], df_dict['Raw'], 
+                    on='utcTimeMillis',
+                    direction='nearest',
+                    tolerance=10000)
+raw2_df
+
+# %%
+# Rawの時間系カラムのユニーク数
+print(df_dict['Raw']['utcTimeMillis'].unique().shape)
+print(df_dict['Raw']['TimeNanos'].unique().shape)
+print(df_dict['Raw']['FullBiasNanos'].unique().shape)
+
+# %%
+# derivedの時間系カラムのユニーク数
+train_df.loc[train_df['collectionName']=='2020-07-17-US-MTV-1', 'millisSinceGpsEpoch'].unique().shape
+
+# %%
+# 片方にしかない時間
+(set(df_dict['Raw']['utcTimeMillis'].apply(unix2gps)) - set(train_df.loc[train_df['collectionName']=='2020-07-17-US-MTV-1', 'millisSinceGpsEpoch']))
+
+# %%
+gt = pd.read_csv('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/ground_truth.csv')
+dr = pd.read_csv('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/Mi8_derived.csv')
+
+set(gt['millisSinceGpsEpoch']) - set(dr['millisSinceGpsEpoch'])
+
+# 1279059935000,1279060131000
+# 1279059935000,1279060131000
+
+# %%[markdown]
+# ### _derived, ground_truth
 # %%
 # train path
 gt_train_path = f'../../data/raw/train/*/{phone_name}/ground_truth.csv'
@@ -237,104 +340,4 @@ display(mean_train_df)
 train_df.to_csv(f'../../data/interim/train/all_{phone_name}_derived.csv', index=False)
 test_df.to_csv(f'../../data/interim/test/all_{phone_name}_derived.csv', index=False)
 
-# %%
-# gnss log path
-gnss_train_path = f'../../data/raw/train/*/{phone_name}/{phone_name}_GnssLog.txt'
-gnss_test_path = f'../../data/raw/test/*/{phone_name}/{phone_name}_GnssLog.txt'
 
-gnss_train_path_list = gb.glob(gnss_train_path)
-gnss_test_path_list = gb.glob(gnss_train_path)
-
-print(gnss_train_path_list)
-print(gnss_test_path_list)
-
-# %%[markdown]
-# ### gnss log
-
-# %%
-# gnss log path
-gnss_log_path = f'../../data/raw/train/*/{phone_name}/{phone_name}_GnssLog.txt'
-gnss_log_path_list = gb.glob(gnss_log_path)
-
-print(gnss_log_path_list)
-# %%
-# gnss log data
-gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
-df_dict = gnss_log_to_dataframes('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/Mi8_GnssLog.txt', gnss_section_names)
-
-display(df_dict.keys())
-display(df_dict)
-# %%
-# UncalGyro
-load_gnss_log(gnss_log_path_list)
-
-# %%
-# UncalAccel
-df_dict['UncalAccel']
-# %%
-# Fix
-df_dict['Fix']
-# %%
-# UncalMag
-df_dict['UncalMag']
-
-# %%
-# Status
-df_dict['Status']
-
-# %%
-# Raw
-df_dict['Raw'].info()
-
-# %%
-# OrientationDeg
-df_dict['OrientationDeg']
-
-# %%
-# 全欠損と結合
-# カラムがあるFixは全欠損で結合される
-null1_df = pd.merge_asof(df_dict['Status'], df_dict['Fix'], 
-                        on='UnixTimeMillis',
-                        direction='nearest',
-                        tolerance=10000)
-
-# カラムがないOritentationDegはエラー
-# null2_df = pd.merge_asof(df_dict['UncalMag'], df_dict['OrientationDeg'], 
-#                         on='utcTimeMillis',
-#                         direction='nearest',
-#                         tolerance=10000)
-
-# %%
-# Rawのmerger_asof
-raw1_df = pd.merge_asof(df_dict['Raw'], df_dict['UncalMag'], 
-                    on='utcTimeMillis',
-                    direction='nearest',
-                    tolerance=10000)
-raw2_df = pd.merge_asof(df_dict['UncalMag'], df_dict['Raw'], 
-                    on='utcTimeMillis',
-                    direction='nearest',
-                    tolerance=10000)
-raw2_df
-
-# %%
-# Rawの時間系カラムのユニーク数
-print(df_dict['Raw']['utcTimeMillis'].unique().shape)
-print(df_dict['Raw']['TimeNanos'].unique().shape)
-print(df_dict['Raw']['FullBiasNanos'].unique().shape)
-
-# %%
-# derivedの時間系カラムのユニーク数
-train_df.loc[train_df['collectionName']=='2020-07-17-US-MTV-1', 'millisSinceGpsEpoch'].unique().shape
-
-# %%
-# 片方にしかない時間
-(set(df_dict['Raw']['utcTimeMillis'].apply(unix2gps)) - set(train_df.loc[train_df['collectionName']=='2020-07-17-US-MTV-1', 'millisSinceGpsEpoch']))
-
-# %%
-gt = pd.read_csv('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/ground_truth.csv')
-dr = pd.read_csv('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/Mi8_derived.csv')
-
-set(gt['millisSinceGpsEpoch']) - set(dr['millisSinceGpsEpoch'])
-
-# 1279059935000,1279060131000
-# 1279059935000,1279060131000
