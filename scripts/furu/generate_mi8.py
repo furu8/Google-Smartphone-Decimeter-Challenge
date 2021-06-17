@@ -19,25 +19,17 @@ warnings.simplefilter('ignore', pd.core.common.SettingWithCopyWarning)
 
 # %%
 # 各種関数
-def load_df(dr_path_list, gt_path_list):
+def load_df(path_list):
     df = pd.DataFrame()
-    dr_paths = np.sort(np.array(dr_path_list))
-    gt_paths = np.sort(np.array(gt_path_list))
-    
-    for dr_path, gt_path in zip(dr_paths, gt_paths):
-        dr_onedf = pd.read_csv(dr_path)
-        gt_onedf = pd.read_csv(gt_path)
-        onedf = pd.merge_asof(dr_onedf, gt_onedf,
-                            on='millisSinceGpsEpoch', 
-                            by=['collectionName', 'phoneName'], 
-                            direction='nearest',
-                            tolerance=100000)
+    for path in np.sort(np.array(path_list)):
+        onedf = pd.read_csv(path)
         df = pd.concat([df, onedf], axis=0)
     
     return df.reset_index(drop=True)
 
 def load_gnss_log(path_list):
     gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
+    df = pd.DataFrame()
 
     paths = np.sort(np.array(path_list))
     for path in paths:
@@ -45,13 +37,20 @@ def load_gnss_log(path_list):
         df_dict = change_dfs_unix2gps(df_dict) # 時間変換(utc->gps)
         df_dict = extract_gnss_log(df_dict) # 空のdf除去
         raw_df = df_dict['Raw']
+        raw_df['elapsedRealtimeNanos'] = np.nan
         df_dict.pop('Raw')
         for key in df_dict.keys():
             raw_df = pd.merge_asof(raw_df, df_dict[key],
                                     on='millisSinceGpsEpoch',
+                                    suffixes=('', key),
                                     direction='nearest',
                                     tolerance=1000) # 1sec
-        print(raw_df.shape)
+        
+        df = pd.concat([df.reset_index(drop=True), 
+                        raw_df.reset_index(drop=True)], axis=0)
+        df = df.drop('elapsedRealtimeNanos', axis=1)
+
+    return df.reset_index(drop=True)
 
 
 def make_df(dfs):
@@ -159,44 +158,98 @@ phone_name = 'Mi8'
 # ### gnss log
 
 # %%
-# gnss log path
+# train gnss log path
 gnss_train_path = f'../../data/raw/train/*/{phone_name}/{phone_name}_GnssLog.txt'
 gnss_test_path = f'../../data/raw/test/*/{phone_name}/{phone_name}_GnssLog.txt'
 
 gnss_train_path_list = gb.glob(gnss_train_path)
-gnss_test_path_list = gb.glob(gnss_train_path)
+gnss_test_path_list = gb.glob(gnss_test_path)
 
 print(gnss_train_path_list)
 print(gnss_test_path_list)
 
 # %%
-# gnss log data
-load_gnss_log(gnss_train_path_list)
+# train gnss log data
+train_gnss_df = load_gnss_log(gnss_train_path_list)
+for col in train_gnss_df.columns:
+    print(col)
 
 # %%
-# gnss log 確認用
+# 出力
+display(train_gnss_df.shape)
+display(train_gnss_df.head())
+display(train_gnss_df.tail())
+
+# %%
+# 欠損
+display(train_gnss_df.info())
+
+# %%
+# test gnss log data
+test_gnss_df = load_gnss_log(gnss_test_path_list)
+for col in test_gnss_df.columns:
+    print(col)
+
+# %%
+display(test_gnss_df.shape)
+display(test_gnss_df.head())
+display(test_gnss_df.tail())
+
+# %%
+# 欠損
+display(test_gnss_df.info())
+
+# %%
+# 統計値
+display(train_gnss_df.describe())
+display(test_gnss_df.describe())
+
+#########################################################################################
+# %%[markdown]
+# ### デバッグ確認用
+# %%
+# train gnss log 確認用
 gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
 path = '../../data/raw/train/2020-07-17-US-MTV-2/Mi8/Mi8_GnssLog.txt'
 df_dict = gnss_log_to_dataframes(path, gnss_section_names)
-# %%
-# UncalAccel
-df_dict['UncalAccel'][df_dict['UncalAccel']['utcTimeMillis'].diff()<0]
 
-
-# %%
-# UncalMag
-df_dict['UncalMag'][df_dict['UncalMag']['utcTimeMillis'].diff()<0]
-
-# %%
 # UncalGyro
-
 # 3801レコード目で時間が逆転してる
 df_dict['UncalGyro'][df_dict['UncalGyro']['utcTimeMillis'].diff()<0]
 df_dict['UncalGyro'].iloc[3799:3805]
 
 # %%
+# train gnss log 確認用
+gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
+path = '../../data/raw/train/2021-04-26-US-SVL-1/Mi8/Mi8_GnssLog.txt'
+df_dict = gnss_log_to_dataframes(path, gnss_section_names)
+
+f_dict = change_dfs_unix2gps(df_dict) # 時間変換(utc->gps)
+df_dict = extract_gnss_log(df_dict) # 空のdf除去
+raw_df = df_dict['Raw']
+df_dict.pop('Raw')
+for key in df_dict.keys():
+    raw_df = pd.merge_asof(raw_df, df_dict[key],
+                            on='millisSinceGpsEpoch',
+                            direction='nearest',
+                            tolerance=1000) # 1sec
+for col in raw_df.columns:
+    print(col)
+# %%
+# UncalAccel
+df_dict['UncalAccel']
+
+# %%
+# UncalMag
+df_dict['UncalMag']
+
+# %%
+# UncalGyro
+df_dict['UncalGyro']
+
+# %%
 # Fix
-df_dict['Fix'][df_dict['Fix']['UnixTimeMillis'].diff()<0]
+df_dict['Fix']
 
 # %%
 # Status
@@ -204,7 +257,7 @@ df_dict['Status']
 
 # %%
 # Raw
-df_dict['Raw'].info()
+df_dict['Raw']
 
 # %%
 # OrientationDeg
@@ -225,7 +278,7 @@ null1_df = pd.merge_asof(df_dict['Status'], df_dict['Fix'],
 #                         tolerance=10000)
 
 # %%
-# Rawのmerger_asof
+# Rawのmerge_asof
 raw1_df = pd.merge_asof(df_dict['Raw'], df_dict['UncalMag'], 
                     on='utcTimeMillis',
                     direction='nearest',
@@ -242,22 +295,7 @@ print(df_dict['Raw']['utcTimeMillis'].unique().shape)
 print(df_dict['Raw']['TimeNanos'].unique().shape)
 print(df_dict['Raw']['FullBiasNanos'].unique().shape)
 
-# %%
-# derivedの時間系カラムのユニーク数
-train_df.loc[train_df['collectionName']=='2020-07-17-US-MTV-1', 'millisSinceGpsEpoch'].unique().shape
-
-# %%
-# 片方にしかない時間
-(set(df_dict['Raw']['utcTimeMillis'].apply(unix2gps)) - set(train_df.loc[train_df['collectionName']=='2020-07-17-US-MTV-1', 'millisSinceGpsEpoch']))
-
-# %%
-gt = pd.read_csv('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/ground_truth.csv')
-dr = pd.read_csv('../../data/raw/train/2020-07-17-US-MTV-1/Mi8/Mi8_derived.csv')
-
-set(gt['millisSinceGpsEpoch']) - set(dr['millisSinceGpsEpoch'])
-
-# 1279059935000,1279060131000
-# 1279059935000,1279060131000
+#################################################################################
 
 # %%[markdown]
 # ### _derived, ground_truth
@@ -268,18 +306,23 @@ dr_train_path = f'../../data/raw/train/*/{phone_name}/{phone_name}_derived.csv'
 gt_train_path_list = gb.glob(gt_train_path)
 dr_train_path_list = gb.glob(dr_train_path)
 
-print(gt_train_path_list)
 print(dr_train_path_list)
+print(gt_train_path_list)
 
 # %%
 # train data
-train_df = load_df(dr_train_path_list, gt_train_path_list)
-display(train_df.shape)
-display(train_df.head())
-display(train_df.tail())
+dr_df = load_df(dr_train_path_list)
+gt_df = load_df(gt_train_path_list)
+display(dr_df.shape)
+display(dr_df.head())
+display(dr_df.tail())
+display(gt_df.shape)
+display(gt_df.head())
+display(gt_df.tail())
 # %%
 # 欠損確認
-display(train_df.info())
+display(dr_df.info())
+display(gt_df.info())
 
 # %%
 # test path
@@ -289,12 +332,7 @@ dr_test_path_list = gb.glob(dr_test_path)
 print(dr_test_path_list)
 # %%
 # test data
-test_df = pd.DataFrame()
-for dr_path in np.sort(np.array(dr_test_path_list)):
-    onedf = pd.read_csv(dr_path)
-    test_df = pd.concat([test_df, onedf], axis=0)
-
-test_df = test_df.reset_index(drop=True)
+test_df = load_df(dr_test_path_list)
 
 display(test_df.shape)
 display(test_df.head())
@@ -303,6 +341,29 @@ display(test_df.tail())
 # %%
 # 欠損確認
 display(test_df.info())
+
+# %%[markdown]
+# ### merge_asof
+# %%
+# train結合
+train_df = pd.merge_asof(train_gnss_df, dr_df,
+                        on='millisSinceGpsEpoch',
+                        direction='nearest',
+                        tolerance=100000)
+train_df = pd.merge_asof(train_df, gt_df,
+                        on='millisSinceGpsEpoch',
+                        by=['collectionName', 'phoneName'],
+                        direction='nearest',
+                        tolerance=100000)
+train_df
+# %%
+# test結合
+test_df = pd.merge_asof(test_gnss_df, test_df,
+                        on='millisSinceGpsEpoch',
+                        direction='nearest',
+                        tolerance=100000)
+
+test_df
 
 # %%
 # 統計値確認
@@ -339,5 +400,3 @@ display(mean_train_df)
 # 保存
 train_df.to_csv(f'../../data/interim/train/all_{phone_name}_derived.csv', index=False)
 test_df.to_csv(f'../../data/interim/test/all_{phone_name}_derived.csv', index=False)
-
-
