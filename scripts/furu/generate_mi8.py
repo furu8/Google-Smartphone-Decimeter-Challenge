@@ -38,6 +38,8 @@ def load_gnss_log(path_list):
         df_dict = extract_gnss_log(df_dict) # 空のdf除去
         raw_df = df_dict['Raw']
         raw_df['elapsedRealtimeNanos'] = np.nan
+        raw_df['collectionName'] = path.split('/')[5]
+        raw_df['phoneName'] = path.split('/')[6]
         df_dict.pop('Raw')
         for key in df_dict.keys():
             raw_df = pd.merge_asof(raw_df, df_dict[key],
@@ -344,12 +346,20 @@ display(test_df.info())
 
 # %%[markdown]
 # ### merge_asof
+
+# %%
+# gnss_log 確認
+train_gnss_df[train_gnss_df['millisSinceGpsEpoch'].diff()<0]
+
 # %%
 # train結合
 train_df = pd.merge_asof(train_gnss_df, dr_df,
                         on='millisSinceGpsEpoch',
+                        by=['collectionName', 'phoneName'],
                         direction='nearest',
                         tolerance=100000)
+
+# %%
 train_df = pd.merge_asof(train_df, gt_df,
                         on='millisSinceGpsEpoch',
                         by=['collectionName', 'phoneName'],
@@ -360,6 +370,7 @@ train_df
 # test結合
 test_df = pd.merge_asof(test_gnss_df, test_df,
                         on='millisSinceGpsEpoch',
+                        by=['collectionName', 'phoneName'],
                         direction='nearest',
                         tolerance=100000)
 
