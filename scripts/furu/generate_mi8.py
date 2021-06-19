@@ -403,6 +403,7 @@ display(mean_test_df.shape)
 display(mean_train_df)
 display(mean_train_df)
 
+
 """
 平均、最大、最小など、好みで中間データをここで吐き出しても良い
 """
