@@ -217,8 +217,6 @@ path = '../../data/raw/train/2021-01-04-US-RWC-2/Pixel5/rawPixel5_GnssLog.txt'
 df_dict = gnss_log_to_dataframes(path, gnss_section_names)
 
 """
-2021-04-22-US-MTV-1/Pixel4Moddedは読み込めない(Eのせい)
-
 ---------------------------------------------------------------------------
 KeyError                                  Traceback (most recent call last)
 ~/Documents/Kaggle/Google Smartphone Decimeter Challenge/scripts/furu/generate_Pixel5.py in 
@@ -385,6 +383,7 @@ train_gnss_df[train_gnss_df['millisSinceGpsEpoch'].diff()<0]
 train_df = pd.merge_asof(train_gnss_df, dr_df,
                         on='millisSinceGpsEpoch',
                         direction='nearest',
+                        by=['collectionName', 'phoneName'],
                         tolerance=100000)
 train_df = pd.merge_asof(train_df, gt_df,
                         on='millisSinceGpsEpoch',
@@ -396,6 +395,7 @@ train_df
 # test結合
 test_df = pd.merge_asof(test_gnss_df, test_df,
                         on='millisSinceGpsEpoch',
+                        by=['collectionName', 'phoneName'],
                         direction='nearest',
                         tolerance=100000)
 
@@ -408,7 +408,7 @@ display(test_df.describe())
 
 # %%
 train_gnss_df[train_gnss_df['millisSinceGpsEpoch'].diff()<0][['FullBiasNanos', 'collectionName']]
-train_gnss_df.iloc[303896:303905][['FullBiasNanos', 'collectionName']]
+# train_gnss_df.iloc[303896:303905][['FullBiasNanos', 'collectionName']]
 
 # %%
 test_gnss_df[test_gnss_df['millisSinceGpsEpoch'].diff()<0][['FullBiasNanos', 'collectionName']]
