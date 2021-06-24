@@ -213,7 +213,7 @@ display(test_gnss_df.describe())
 # %%
 # train gnss log 確認用
 gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
-path = '../../data/raw/test/2021-04-22-US-MTV-1/Pixel4Modded/Pixel4Modded_GnssLog.txt'
+path = '../../data/raw/test/2021-04-21-US-MTV-1/Pixel4Modded/rawPixel4Modded_GnssLog.txt'
 df_dict = gnss_log_to_dataframes(path, gnss_section_names)
 
 """
@@ -250,6 +250,51 @@ pandas/_libs/lib.pyx in pandas._libs.lib.maybe_convert_numeric()
 
 ValueError: Unable to parse string "-7.0277543E" at position 146345
 """
+
+# %%
+def gnss_log_to_dataframes4E(path, gnss_section_names):
+    """
+    https://www.kaggle.com/sohier/loading-gnss-logs
+    """
+    print('Loading ' + path, flush=True)
+    
+    with open(path) as f_open:
+        datalines = f_open.readlines()
+
+    datas = {k: [] for k in gnss_section_names}
+    gnss_map = {k: [] for k in gnss_section_names}
+    for dataline in datalines:
+        is_header = dataline.startswith('#')
+        dataline = dataline.strip('#').strip().split(',')
+        # skip over notes, version numbers, etc
+        if is_header and dataline[0] in gnss_section_names:
+            gnss_map[dataline[0]] = dataline[1:]
+        elif not is_header:
+            datas[dataline[0]].append(dataline[1:])
+
+    results = dict()
+    for k, v in datas.items():
+        results[k] = pd.DataFrame(v, columns=gnss_map[k])
+    # pandas doesn't properly infer types from these lists by default
+    for k, df in results.items():
+        for col in df.columns:
+            if col == 'CodeType':
+                continue
+            if k == 'UncalGyro' and (col == 'DriftXRadPerSec' or col == 'DriftYRadPerSec' or col == 'DriftZRadPerSec'):
+                print(results[k][col])
+                results[k][col] = results[k][col].astype(float)
+            results[k][col] = pd.to_numeric(results[k][col])
+
+    return results
+
+# %%
+df_dict = gnss_log_to_dataframes4E(path, gnss_section_names)
+df_dict.keys()
+
+# %%
+adf = pd.DataFrame({'x':['-7.0277543E-4', '-7.123707E-4']})
+adf = adf['x'].astype(float)
+adf
 # %%
 # train gnss log 確認用
 gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
