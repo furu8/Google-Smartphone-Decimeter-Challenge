@@ -132,7 +132,8 @@ display(merged_train_gnss_df)
 display(train_gt_df[['latDeg', 'lngDeg']])
 
 # %%
-train_gnssgt_df = pd.merge_asof(merged_train_gnss_df, train_gt_df, 
+train_gnssgt_df = pd.merge_asof(merged_train_gnss_df, 
+                        train_gt_df[['latDeg', 'lngDeg', 'millisSinceGpsEpoch', 'phoneName', 'collectionName']], 
                         on='millisSinceGpsEpoch',
                         by=['phoneName', 'collectionName'],
                         direction='nearest',
@@ -269,5 +270,7 @@ test_df[405:435]
 # %%
 name = str(dt.now().strftime('%Y-%m-%d_%H'))
 
-train_df.to_csv(f'../../data/processed/confirm/train/{name}_{phone_name}.csv')
-test_df.to_csv(f'../../data/processed/confirm/test/{name}_{phone_name}.csv')
+train_df.to_csv(f'../../data/processed/confirm/train/{name}_{phone_name}.csv', index=False)
+test_df.to_csv(f'../../data/processed/confirm/test/{name}_{phone_name}.csv', index=False)
+
+# %%
