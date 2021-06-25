@@ -118,18 +118,47 @@ display(train_gnss_df_mean)
 
 # %%
 # phoneNameとcollectionNameを結合
-new_train_gnss_df = pd.merge_asof(train_gnss_df_mean, train_dr_df[['phoneName', 'collectionName', 'millisSinceGpsEpoch']], on='millisSinceGpsEpoch')
+new_train_gnss_df = pd.merge_asof(train_gnss_df_mean, 
+                            train_dr_df[['phoneName', 'collectionName', 'millisSinceGpsEpoch']], 
+                            on='millisSinceGpsEpoch', 
+                            direction='nearest')
 new_train_gnss_df
 
 # %%[markdown]
 # # ground_truth
 # %%
 train_gt_df
+
 # %%[markdown]
 # # 結合
 
 # %%
-# lat（緯度）
-display(train_dr_df)
+# 結合メンバー
+display(new_train_dr_df)
+display(new_train_gnss_df)
+display(train_gt_df)
 
-# runner = Runner()
+# %%
+train_gnssgt_df = pd.merge_asof(new_train_gnss_df, train_gt_df, 
+                        on='millisSinceGpsEpoch',
+                        by=['phoneName', 'collectionName'],
+                        direction='nearest',
+                        tolerance=1000
+                        )
+train_df = pd.merge_asof(train_gnssgt_df, new_train_dr_df, 
+                    on = 'millisSinceGpsEpoch',
+                    by=['phoneName', 'collectionName'],
+                    suffixes=('_gnss', '_derived'),
+                    direction='nearest',
+                    tolerance=10000 # Mi8は1000にすると欠損
+                    )
+train_df
+
+# %%
+# tolerance=1000にしたとき、derivedと結合する欠損するやつ
+train_df.loc[train_df['Svid_derived'].isnull(), ['millisSinceGpsEpoch']]
+
+# %%
+train_df[3835:3840]
+
+# %%
