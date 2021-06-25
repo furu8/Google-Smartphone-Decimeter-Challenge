@@ -13,6 +13,13 @@ pd.set_option('display.max_columns', 500)
 def calc_max_index(df, col):
     return df[col].value_counts().idxmax()
 
+def act_groupby_value_counsts(df1, df2, col_list):
+    for col in col_list:
+        df = pd.DataFrame(df1.groupby(['millisSinceGpsEpoch']).apply(calc_max_index, col=col), columns=[col]).reset_index()
+        df2[col] = df[col].values
+    
+    return df2
+
 # %%
 phone_name = input('スマホの名前指定: ')
 
@@ -49,25 +56,10 @@ train_dr_df_mean
 
 # %%
 # category変数はもっとも多い値
-constellation_type_df = pd.DataFrame(train_dr_df_category.groupby(['millisSinceGpsEpoch']).apply(calc_max_index, col='ConstellationType'), columns=['ConstellationType']).reset_index()
-svid_df = pd.DataFrame(train_dr_df_category.groupby(['millisSinceGpsEpoch']).apply(calc_max_index, col='Svid'), columns=['Svid']).reset_index()
-signal_type_df = pd.DataFrame(train_dr_df_category.groupby(['millisSinceGpsEpoch']).apply(calc_max_index, col='signalType'), columns=['signalType']).reset_index()
+train_dr_df_mean = act_groupby_value_counsts(train_dr_df_category, train_dr_df_mean, derived_list)
 # %%
-display(constellation_type_df)
-display(svid_df)
-display(signal_type_df)
-
-# %%
-# category変数をgroupbyした数値と結合
-train_dr_df_mean['ConstellationType'] = constellation_type_df['ConstellationType'].values
-train_dr_df_mean['Svid'] = svid_df['Svid'].values
-train_dr_df_mean['signalType'] = signal_type_df['signalType'].values
 train_dr_df_mean
 
-# %%
-# phoneNameとcollectionNameを結合
-new_train_dr_df = pd.merge_asof(train_dr_df_mean, train_dr_df[['phoneName', 'collectionName', 'millisSinceGpsEpoch']], on='millisSinceGpsEpoch')
-new_train_dr_df
 
 # %%[markdown]
 # # gnss
@@ -110,19 +102,17 @@ train_gnss_df_mean
 
 # %%
 # category変数はもっとも多い値
-for gnss_col in gnss_list:
-    df = pd.DataFrame(train_gnss_df_category.groupby(['millisSinceGpsEpoch']).apply(calc_max_index, col=gnss_col), columns=[gnss_col]).reset_index()
-    train_gnss_df_mean[gnss_col] = df[gnss_col].values
+train_gnss_df_mean = act_groupby_value_counsts(train_gnss_df_category, train_gnss_df_mean, gnss_list)
 # %%
 display(train_gnss_df_mean)
 
 # %%
 # phoneNameとcollectionNameを結合
-new_train_gnss_df = pd.merge_asof(train_gnss_df_mean, 
+merged_train_gnss_df = pd.merge_asof(train_gnss_df_mean, 
                             train_dr_df[['phoneName', 'collectionName', 'millisSinceGpsEpoch']], 
                             on='millisSinceGpsEpoch', 
                             direction='nearest')
-new_train_gnss_df
+merged_train_gnss_df
 
 # %%[markdown]
 # # ground_truth
@@ -134,18 +124,18 @@ train_gt_df
 
 # %%
 # 結合メンバー
-display(new_train_dr_df)
-display(new_train_gnss_df)
+display(train_dr_df)
+display(merged_train_gnss_df)
 display(train_gt_df)
 
 # %%
-train_gnssgt_df = pd.merge_asof(new_train_gnss_df, train_gt_df, 
+train_gnssgt_df = pd.merge_asof(merged_train_gnss_df, train_gt_df, 
                         on='millisSinceGpsEpoch',
                         by=['phoneName', 'collectionName'],
                         direction='nearest',
                         tolerance=1000
                         )
-train_df = pd.merge_asof(train_gnssgt_df, new_train_dr_df, 
+train_df = pd.merge_asof(train_gnssgt_df, train_dr_df, 
                     on = 'millisSinceGpsEpoch',
                     by=['phoneName', 'collectionName'],
                     suffixes=('_gnss', '_derived'),
