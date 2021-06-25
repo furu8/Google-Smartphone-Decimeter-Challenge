@@ -2,22 +2,25 @@ import numpy as np
 import pandas as pd
 from .model import Model
 from sklearn.metrics import log_loss
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import TimeSeriesSplit
 from typing import Callable, List, Optional, Tuple, Union
 
 from .util import Logger, Util
 
-logger = Logger()
+# logger = Logger()
 
 
 class Runner:
 
     # def __init__(self, df, run_name: str, model_cls: Callable[[str, dict], Model], features: List[str], params: dict):
-    def __init__(self, train_x, train_y, run_name: str, model_cls: Callable[[str, dict], Model], params: dict):
+    def __init__(self, train_x, train_y, run_name: str, 
+                latmodel: Callable[[str, dict], Model], lngmodel: Callable[[str, dict], Model], 
+                params: dict):
         """コンストラクタ
 
         :param run_name: ランの名前
-        :param model_cls: モデルのクラス
+        :param latmodel: 緯度モデル
+        :param lngmodel: 経度モデル
         :param features: 特徴量のリスト
         :param params: ハイパーパラメータ
         """
@@ -25,7 +28,8 @@ class Runner:
         self.train_y = train_y
 
         self.run_name = run_name
-        self.model_cls = model_cls
+        self.latmodel = latmodel
+        self.lngmodel = lngmodel
         # self.features = features
         self.params = params
         self.n_fold = 4
@@ -40,123 +44,137 @@ class Runner:
         :return: （モデルのインスタンス、レコードのインデックス、予測値、評価によるスコア）のタプル
         """
         # 学習データの読込
-        validation = i_fold != 'all'
+        isvalid = i_fold != 'all'
         # train_x = self.load_x_train()
         # train_y = self.load_y_train()
         train_x = self.train_x
         train_y = self.train_y
 
-        if validation:
+        if isvalid:
             # 学習データ・バリデーションデータをセットする
             tr_idx, va_idx = self.load_index_fold(i_fold)
             tr_x, tr_y = train_x.iloc[tr_idx], train_y.iloc[tr_idx]
             va_x, va_y = train_x.iloc[va_idx], train_y.iloc[va_idx]
 
             # 学習を行う
-            model = self.build_model(i_fold)
-            model.train(tr_x, tr_y, va_x, va_y)
+            latmodel = self.build_model(i_fold, isDeg='lat')
+            lngmodel = self.build_model(i_fold, isDeg='lng')
+            latmodel.train(tr_x, tr_y['latDeg'], va_x, va_y['latDeg'])
+            lngmodel.train(tr_x, tr_y['lngDeg'], va_x, va_y['lngDeg'])
 
             # バリデーションデータへの予測・評価を行う
-            va_pred = model.predict(va_x)
-            score = log_loss(va_y, va_pred, eps=1e-15, normalize=True)
+            lat_va_pred = latmodel.predict(va_x)
+            lng_va_pred = lngmodel.predict(va_x)
+            
 
-            # モデル、インデックス、予測値、評価を返す
-            return model, va_idx, va_pred, score
+            # モデル、インデックス、予測値を返す
+            return latmodel, lngmodel, va_idx, lat_va_pred, lng_va_pred
         else:
             # 学習データ全てで学習を行う
-            model = self.build_model(i_fold)
-            model.train(train_x, train_y)
+            latmodel = self.build_model(i_fold, isDeg='lat')
+            lngmodel = self.build_model(i_fold, isDeg='lng')
+            latmodel.train(train_x, train_y['latDeg'])
+            lngmodel.train(train_x, train_y['lngDeg'])
 
             # モデルを返す
-            return model, None, None, None
+            return latmodel, lngmodel, None, None, None
 
     def run_train_cv(self) -> None:
         """クロスバリデーションでの学習・評価を行う
 
         学習・評価とともに、各foldのモデルの保存、スコアのログ出力についても行う
         """
-        logger.info(f'{self.run_name} - start training cv')
+        # logger.info(f'{self.run_name} - start training cv')
 
-        scores = []
         va_idxes = []
-        preds = []
+        latpreds = []
+        lngpreds = []
 
         # 各foldで学習を行う
         for i_fold in range(self.n_fold):
             # 学習を行う
-            logger.info(f'{self.run_name} fold {i_fold} - start training')
-            model, va_idx, va_pred, score = self.train_fold(i_fold)
-            logger.info(f'{self.run_name} fold {i_fold} - end training - score {score}')
+            # logger.info(f'{self.run_name} fold {i_fold} - start training')
+            latmodel, lngmodel, va_idx, lat_va_pred, lng_va_pred = self.train_fold(i_fold)
+            # logger.info(f'{self.run_name} fold {i_fold} - end training - score {score}')
 
             # モデルを保存する
-            model.save_model()
+            latmodel.save_model()
+            lngmodel.save_model()
 
             # 結果を保持する
             va_idxes.append(va_idx)
-            scores.append(score)
-            preds.append(va_pred)
+            latpreds.append(lat_va_pred)
+            lngpreds.append(lng_va_pred)
 
         # 各foldの結果をまとめる
         va_idxes = np.concatenate(va_idxes)
         order = np.argsort(va_idxes)
-        preds = np.concatenate(preds, axis=0)
-        preds = preds[order]
+        latpreds = np.concatenate(latpreds, axis=0)
+        lngpreds = np.concatenate(lngpreds, axis=0)
+        latpreds = latpreds[order]
+        lngpreds = lngpreds[order]
 
-        logger.info(f'{self.run_name} - end training cv - score {np.mean(scores)}')
+        # logger.info(f'{self.run_name} - end training cv - score {np.mean(scores)}')
 
         # 予測結果の保存
-        Util.dump(preds, f'../model/pred/{self.run_name}-train.pkl')
+        # Util.dump(latpreds, f'../model/pred/{self.run_name}-train.pkl')
 
         # 評価結果の保存
-        logger.result_scores(self.run_name, scores)
+        # logger.result_scores(self.run_name, scores)
 
     def run_predict_cv(self, test_x) -> None:
         """クロスバリデーションで学習した各foldのモデルの平均により、テストデータの予測を行う
 
         あらかじめrun_train_cvを実行しておく必要がある
         """
-        logger.info(f'{self.run_name} - start prediction cv')
+        # logger.info(f'{self.run_name} - start prediction cv')
 
         # test_x = self.load_x_test()
 
-        preds = []
+        latpreds = []
+        lngpreds = []
 
         # 各foldのモデルで予測を行う
         for i_fold in range(self.n_fold):
-            logger.info(f'{self.run_name} - start prediction fold:{i_fold}')
-            model = self.build_model(i_fold)
-            model.load_model()
-            pred = model.predict(test_x)
-            preds.append(pred)
-            logger.info(f'{self.run_name} - end prediction fold:{i_fold}')
+            # logger.info(f'{self.run_name} - start prediction fold:{i_fold}')
+            latmodel = self.build_model(i_fold, isDeg='lat')
+            lngmodel = self.build_model(i_fold, isDeg='lng')
+            latmodel.load_model()
+            lngmodel.load_model()
+            latpred = latmodel.predict(test_x)
+            lngpred = lngmodel.predict(test_x)
+            latpreds.append(latpred)
+            lngpreds.append(lngpred)
+            # logger.info(f'{self.run_name} - end prediction fold:{i_fold}')
 
         # 予測の平均値を出力する
-        pred_avg = np.mean(preds, axis=0)
+        latpred_avg = np.mean(latpreds, axis=0)
+        lngpred_avg = np.mean(lngpreds, axis=0)
 
         # 予測結果の保存
-        Util.dump(pred_avg, f'../model/pred/{self.run_name}-test.pkl')
+        # Util.dump(pred_avg, f'../model/pred/{self.run_name}-test.pkl')
 
-        logger.info(f'{self.run_name} - end prediction cv')
+        # logger.info(f'{self.run_name} - end prediction cv')
 
-        return pred_avg
+        return latpred_avg, lngpred_avg
 
     def run_train_all(self) -> None:
         """学習データすべてで学習し、そのモデルを保存する"""
-        logger.info(f'{self.run_name} - start training all')
+        # logger.info(f'{self.run_name} - start training all')
 
         # 学習データ全てで学習を行う
         i_fold = 'all'
         model, _, _, _ = self.train_fold(i_fold)
         model.save_model()
 
-        logger.info(f'{self.run_name} - end training all')
+        # logger.info(f'{self.run_name} - end training all')
 
     def run_predict_all(self, test_x) -> None:
         """学習データすべてで学習したモデルにより、テストデータの予測を行う
 
         あらかじめrun_train_allを実行しておく必要がある
         """
-        logger.info(f'{self.run_name} - start prediction all')
+        # logger.info(f'{self.run_name} - start prediction all')
 
         # test_x = self.load_x_test()
         # test_x = self.test_x
@@ -164,17 +182,18 @@ class Runner:
         # 学習データ全てで学習したモデルで予測を行う
         i_fold = 'all'
         model = self.build_model(i_fold)
+        model = self.build_model(i_fold)
         model.load_model()
         pred = model.predict(test_x)
 
         # 予測結果の保存
         Util.dump(pred, f'../model/pred/{self.run_name}-test.pkl')
 
-        logger.info(f'{self.run_name} - end prediction all')
+        # logger.info(f'{self.run_name} - end prediction all')
 
         return pred
 
-    def build_model(self, i_fold: Union[int, str]) -> Model:
+    def build_model(self, i_fold: Union[int, str], isDeg) -> Model:
         """クロスバリデーションでのfoldを指定して、モデルの作成を行う
 
         :param i_fold: foldの番号
@@ -182,7 +201,13 @@ class Runner:
         """
         # ラン名、fold、モデルのクラスからモデルを作成する
         run_fold_name = f'{self.run_name}-{i_fold}'
-        return self.model_cls(run_fold_name, self.params)
+        if isDeg == 'lat':
+            return self.latmodel(run_fold_name, self.params)
+        elif isDeg == 'lng':
+            return self.lngmodel(run_fold_name, self.params)
+        else:
+            raise Exception('isDegミスってね？')
+
 
     def load_x_train(self) -> pd.DataFrame:
         """学習データの特徴量を読み込む
@@ -223,5 +248,5 @@ class Runner:
         # train_y = self.load_y_train()
         train_y = self.train_y
         dummy_x = np.zeros(len(train_y))
-        skf = StratifiedKFold(n_splits=self.n_fold, shuffle=True, random_state=71)
-        return list(skf.split(dummy_x, train_y))[i_fold]
+        tss = TimeSeriesSplit(n_splits=self.n_fold, shuffle=True, random_state=71)
+        return list(tss.split(dummy_x, train_y))[i_fold]
