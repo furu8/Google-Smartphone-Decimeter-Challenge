@@ -50,6 +50,9 @@ class Runner:
         train_x = self.train_x
         train_y = self.train_y
 
+
+        score_df = pd.DataFrame()
+
         if isvalid:
             # 学習データ・バリデーションデータをセットする
             tr_idx, va_idx = self.load_index_fold(i_fold)
@@ -65,10 +68,16 @@ class Runner:
             # バリデーションデータへの予測・評価を行う
             lat_va_pred = latmodel.predict(va_x)
             lng_va_pred = lngmodel.predict(va_x)
-            
 
-            # モデル、インデックス、予測値を返す
-            return latmodel, lngmodel, va_idx, lat_va_pred, lng_va_pred
+            score_df['lat_pred'] = lat_va_pred
+            score_df['lng_pred'] = lng_va_pred
+            score_df['lat_truth'] = va_y['latDeg'].values
+            score_df['lng_truth'] = va_y['lngDeg'].values
+            score_df['dist'] = self.evaluate_lat_lng_dist(score_df)
+            
+            # モデル、スコアを返す
+            return latmodel, lngmodel, score_df
+        
         else:
             # 学習データ全てで学習を行う
             latmodel = self.build_model(i_fold, isDeg='lat')
@@ -77,7 +86,7 @@ class Runner:
             lngmodel.train(train_x, train_y['lngDeg'])
 
             # モデルを返す
-            return latmodel, lngmodel, None, None, None
+            return latmodel, lngmodel, None
 
     def run_train_cv(self) -> None:
         """クロスバリデーションでの学習・評価を行う
@@ -86,15 +95,13 @@ class Runner:
         """
         # logger.info(f'{self.run_name} - start training cv')
 
-        va_idxes = []
-        latpreds = []
-        lngpreds = []
+        score_df_list = []
 
         # 各foldで学習を行う
         for i_fold in range(self.n_fold):
             # 学習を行う
             # logger.info(f'{self.run_name} fold {i_fold} - start training')
-            latmodel, lngmodel, va_idx, lat_va_pred, lng_va_pred = self.train_fold(i_fold)
+            latmodel, lngmodel, score_df = self.train_fold(i_fold)
             # logger.info(f'{self.run_name} fold {i_fold} - end training - score {score}')
 
             # モデルを保存する
@@ -102,17 +109,8 @@ class Runner:
             lngmodel.save_model()
 
             # 結果を保持する
-            va_idxes.append(va_idx)
-            latpreds.append(lat_va_pred)
-            lngpreds.append(lng_va_pred)
+            score_df_list.append(score_df)
 
-        # 各foldの結果をまとめる
-        va_idxes = np.concatenate(va_idxes)
-        order = np.argsort(va_idxes)
-        latpreds = np.concatenate(latpreds, axis=0)
-        lngpreds = np.concatenate(lngpreds, axis=0)
-        latpreds = latpreds[order]
-        lngpreds = lngpreds[order]
 
         # logger.info(f'{self.run_name} - end training cv - score {np.mean(scores)}')
 
@@ -121,6 +119,8 @@ class Runner:
 
         # 評価結果の保存
         # logger.result_scores(self.run_name, scores)
+
+        return score_df_list
 
     def run_predict_cv(self, test_x) -> None:
         """クロスバリデーションで学習した各foldのモデルの平均により、テストデータの予測を行う
@@ -143,8 +143,10 @@ class Runner:
             lngmodel.load_model()
             latpred = latmodel.predict(test_x)
             lngpred = lngmodel.predict(test_x)
+
             latpreds.append(latpred)
             lngpreds.append(lngpred)
+
             # logger.info(f'{self.run_name} - end prediction fold:{i_fold}')
 
         # 予測の平均値を出力する
@@ -152,11 +154,38 @@ class Runner:
         lngpred_avg = np.mean(lngpreds, axis=0)
 
         # 予測結果の保存
-        # Util.dump(pred_avg, f'../model/pred/{self.run_name}-test.pkl')
+        Util.dump(latpred_avg, f'../../result/{self.run_name}-test.pkl')
+        Util.dump(lngpred_avg, f'../../result/{self.run_name}-test.pkl')
 
         # logger.info(f'{self.run_name} - end prediction cv')
 
-        return latpred_avg, lngpred_avg
+    
+    def evaluate_lat_lng_dist(self, df):
+        """
+        Calculate the great circle distance between two points 
+        on the earth (specified in decimal degrees)
+        """
+        # Radius of earth in kilometers is 6371 or 6371
+        RADIUS = 6371000
+        # RADIUS = 6367000
+        
+        dist_list = []
+
+        for i in range(len(df)):
+            lat_truth = df.loc[i, 'lat_truth']
+            lng_truth = df.loc[i, 'lng_truth']
+            lat_pred = df.loc[i, 'lat_pred']
+            lng_pred = df.loc[i, 'lng_pred']
+            # convert decimal degrees to radians 
+            lng_truth, lat_truth, lng_pred, lat_pred = map(np.deg2rad, [lng_truth, lat_truth, lng_pred, lat_pred])
+            # haversine formula 
+            dlng = lng_pred - lng_truth 
+            dlat = lat_pred - lat_truth 
+            a = np.sin(dlat/2)**2 + np.cos(lat_truth) * np.cos(lat_pred) * np.sin(dlng/2)**2
+            dist = 2 * RADIUS * np.arcsin(np.sqrt(a))
+            dist_list.append(dist)
+    
+        return dist_list
 
     def run_train_all(self) -> None:
         """学習データすべてで学習し、そのモデルを保存する"""
@@ -200,10 +229,11 @@ class Runner:
         :return: モデルのインスタンス
         """
         # ラン名、fold、モデルのクラスからモデルを作成する
-        run_fold_name = f'{self.run_name}-{i_fold}'
         if isDeg == 'lat':
+            run_fold_name = f'{self.run_name}-lat-{i_fold}'
             return self.latmodel(run_fold_name, self.params)
         elif isDeg == 'lng':
+            run_fold_name = f'{self.run_name}-lng-{i_fold}'
             return self.lngmodel(run_fold_name, self.params)
         else:
             raise Exception('isDegミスってね？')
@@ -248,5 +278,5 @@ class Runner:
         # train_y = self.load_y_train()
         train_y = self.train_y
         dummy_x = np.zeros(len(train_y))
-        tss = TimeSeriesSplit(n_splits=self.n_fold, shuffle=True, random_state=71)
+        tss = TimeSeriesSplit(n_splits=self.n_fold)
         return list(tss.split(dummy_x, train_y))[i_fold]
