@@ -21,14 +21,14 @@ class ModelLGB(Model):
         # 学習
         if isvalid:
             self.model = lgb.train(params, lgb_train, valid_sets=lgb_valid)
-            best_params, tuning_history = dict(), list()
-            booster = lgb.train(params, lgb_train, valid_sets=lgb_valid,
-                                verbose_eval=0,
-                                best_params=best_params,
-                                tuning_history=tuning_history)
+            # best_params, tuning_history = dict(), list()
+            # booster = lgb.train(params, lgb_train, valid_sets=lgb_valid,
+            #                     verbose_eval=0,
+            #                     best_params=best_params,
+            #                     tuning_history=tuning_history)
  
-            print('Best Params:', best_params)
-            print('Tuning history:', tuning_history)
+            # print('Best Params:', best_params)
+            # print('Tuning history:', tuning_history)
         else:
             self.model = lgb.train(params, lgb_train)
 
@@ -47,11 +47,11 @@ class ModelLGB(Model):
 
 
     def save_model(self):
-        model_path = os.path.join('../models/lgb', f'{self.run_fold_name}.model')
+        model_path = os.path.join('../../models/lgb', f'{self.run_fold_name}.model')
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
         Util.dump(self.model, model_path)
 
 
     def load_model(self):
-        model_path = os.path.join('../models/lgb', f'{self.run_fold_name}.model')
+        model_path = os.path.join('../../models/lgb', f'{self.run_fold_name}.model')
         self.model = Util.load(model_path)
