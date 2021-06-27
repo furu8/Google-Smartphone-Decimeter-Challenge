@@ -279,4 +279,72 @@ s = -7.0277543E-4
 print(f"{s:f}")
 # %%
 gnss_log_to_dataframes("../../data/raw/test/2021-04-21-US-MTV-1/Pixel4Modded/Pixel4Modded_GnssLog.txt")
+
+# %%
+## gnssをそれぞれでconcatとする
+def concat_gnss_df(base, new):
+    for key in base.keys():
+        try:
+            base[key] = pd.concat([base[key], new[key]], ignore_index=True)
+        except TypeError:
+            base[key] = new[key]
+    return base
+# %%
+## これでGNSSを一気に吐き出せるはず
+## 結合するためのコードを書きます
+## とりあえず端末ごとに日毎の取得データとground_truthをくっつけますね
+## 端末リストとか共通のパスはハードコーディングで勘弁してくれ
+phone_list = ["Pixel4", "Pixel4XL", "Pixel4Modded", "Pixel4XLModded", "Mi8", "SamsungS20Ultra", "Pixel5"]
+base_path = "../../data/raw/"
+#gnss_df = pd.DataFrame()
+gnss_section_names = {'Raw','UncalAccel', 'UncalGyro', 'UncalMag', 'Fix', 'Status', 'OrientationDeg'}
+dfs = {k: {l: [] for l in gnss_section_names} for k in phone_list}
+#gnss_df = {k: [] for k in gnss_section_names}
+#phone = "Pixel4XLModded"
+#gt = pd.DataFrame()
+#derived_data = pd.DataFrame()
+import os
+for path in ['train', 'test']:
+    for root, dirs, files in os.walk(base_path + path):
+        #csvs = filter(lambda f: f.endswith(".csv"), files)
+        txts = filter(lambda f: f.endswith(".txt"), files)
+        for txt in txts:
+            #print(txt)
+            #if phone not in root:
+            #    continue
+            #else:
+            #if 'ground_truth' in csv:
+                #gt = pd.concat([gt, pd.read_csv(os.path.join(root, csv))], ignore_index=True)
+            #elif 'derived' in csv:
+                #derived_data = pd.concat([derived_data, pd.read_csv(os.path.join(root, csv))], ignore_index=True)
+            #try:
+            gnss_data = gnss_log_to_dataframes(os.path.join(root, txt))#.replace("derived.csv", "GnssLog.txt"))
+            #merge_data = merge_gnss_data(sort_gnss_dataframe(gnss_data))
+            #gnss_df = pd.concat([gnss_df, merge_data], ignore_index=True)
+            dfs[txt.split('_')[0]] = concat_gnss_df(dfs[txt.split('_')[0]], gnss_data)
+            #except KeyError:
+                #gnss_df = merge_data
+                #gnss_df = gnss_data
+            #gt = get_data = None
+    #display(dfs['Mi8'])
+    for key in dfs.keys():
+        for sub_key in dfs[key].keys():
+            dfs[key][sub_key].to_csv(f'../../data/interim/{path}/merged_{key}_{sub_key}.csv', sep=',', index=False)
+#derived_data.rename(columns={"svid": "Svid", "constellationType": "ConstellationType"}, inplace=True)
+#gt.to_csv(f'../../data/interim/test/merged_{phone}_gt.csv', sep=',', index=False)
+#derived_data.to_csv(f'../../data/interim/test/merged_{phone}_derived.csv', sep=',', index=False)
+#gnss_df.to_csv(f'../../data/interim/test/merged_{phone}_gnss.csv', sep=',', index=False)
+
+# %%
+gt[gt["millisSinceGpsEpoch"].diff()<0]
+# %%
+derived_data[derived_data["millisSinceGpsEpoch"].diff()<0]
+# %%
+derived_data
+# %%
+#gnss_df[gnss_df["millisSinceGpsEpoch"].diff()<0]
+# %%
+gt.to_csv('../../data/interim/train/merged_Mi8_gt.csv', sep=',', index=False)
+derived_data.to_csv('../../data/interim/train/merged_Mi8_derived.csv', sep=',', index=False)
+#gnss_df.to_csv('../../data/interim/train/merged_Mi8_gnss.csv', sep=',', index=False)
 # %%
