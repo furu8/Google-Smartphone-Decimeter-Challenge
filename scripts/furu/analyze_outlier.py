@@ -107,9 +107,9 @@ for col, date_list in outlier_date_dict.items():
 %%time
 # 外れ値だけでヒストグラム可視化（全体）
 print(outlier_col_list)
-for outlier_col in outlier_col_list:
-    print(outlier_col)
-    outlier.plot_hist(outlier_col)
+for col in outlier_col_list:
+    print(col)
+    outlier.plot_hist(col)
 
 # %%
 %%time
@@ -117,12 +117,8 @@ for outlier_col in outlier_col_list:
 print(outlier_date_dict)
 for col, date_list in outlier_date_dict.items():
     for date in date_list:
-        print(outlier_col, date)
-        outlier.plot_onedate_line(outlier_col, date=date)
-
-# %%
-outlier.df
-
+        print(col, date)
+        outlier.plot_onedate_line(col, date=date)
 # %%
 # profile = pdp.ProfileReport(train_dr_df)
 # profile.to_file(outputfile=f'train_dr_df_{phone_name}.html')
