@@ -32,7 +32,7 @@ class Outlier:
         df = self.df.select_dtypes(include='number').copy() # int, floatだけ抽出
         df[f'{col}_mean'] = df[col].mean()
         df[f'{col}_std'] = df[col].std()
-        th = df[f'{col}_mean'] + df[f'{col}_std'] * 6
+        th = df[f'{col}_mean'] + df[f'{col}_std'] * 3
         return df[df[col]>th]
 
     def plot_hist(self, col):
@@ -69,23 +69,28 @@ outlier.df.describe()
 outlier.df.info()
 
 # %%
+# Mi8_train_Status_add_columnsのmillisSinceGpsEpochが、取り始めにアンダフロー値が出てる
+# outlier.df[['millisSinceGpsEpoch', 'collectionName']][2700:2850]
+# outlier.df[['millisSinceGpsEpoch', 'collectionName']][50300:50340]
+# outlier.df.loc[outlier.df['millisSinceGpsEpoch']<0, ['millisSinceGpsEpoch', 'collectionName']]
+
+# %%
 # 外れ値
 outlier_col_list = []
 outlier_date_dict = {}
 
 for col in outlier.df.select_dtypes(include='number').columns:
     outlier_df = outlier.detect_outlier(col)
-
-    outlier_date_df = pd.merge_asof(outlier_df, outlier.df[['millisSinceGpsEpoch', 'collectionName']], 
-            on='millisSinceGpsEpoch')[['collectionName', col]]
-
+    print(col)
+    display(outlier_df)
     # dfが空じゃなかったら
     if not outlier_df.empty:
+        outlier_date_df = pd.merge_asof(outlier_df, outlier.df[['millisSinceGpsEpoch', 'collectionName']].sort_values('millisSinceGpsEpoch'), 
+            on='millisSinceGpsEpoch')[['collectionName', col]]
         outlier_col_list.append(col)
-        outlier_date_dict[col] = (outlier_date_df['collectionName'].unique())
+        outlier_date_dict[col] = (outlier_date_df['collectionName'].unique())       
 
-    print(col)
-    display(outlier_date_df)
+        display(outlier_date_df)
 
 # %%
 # 外れ値とみなしたカラムだけの基本統計量
