@@ -11,7 +11,35 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 
 # %%
+class DataJoiner:
+    def __init__(self, phone_name, data_dir='train'):
+        self.phone_name = phone_name
+        self.data_dir = data_dir
+        self.names = ('derived', 'Fix', 
+                'OrientationDeg', 'Raw', 'Status', 
+                'UncalAccel', 'UncalGyro', 'UncalMag', 'gt')
+        self.df_info = pd.DataFrame(index=self.names)
 
+    def load_df_dict(self):
+        self.df_dict = {}
+        for name in self.names:
+            if name == 'derived' or name == 'gt':
+                self.df_dict[name] = pd.read_csv(f'../../data/interim/{self.data_dir}/merged_{self.phone_name}_{name}.csv')
+            else:
+                self.df_dict[name] = pd.read_csv(f'../../data/interim/{self.data_dir}/merged_{self.phone_name}_{name}_add_columns.csv')
+    
+        return self.df_dict
+
+    def check_millis_order(self, df_dict):
+        diff_millis_list = [df_dict[key][df_dict[key]['millisSinceGpsEpoch'].diff()<0].empty for key in df_dict.keys()]
+        self.df_info['isorder'] = diff_millis_list # Trueだと時間順
+        print(self.df_info) 
+
+    def check_empty_df(self, df_dict):
+        empty_list = [df_dict[key].empty for key in df_dict.keys()]
+        self.df_info['isempty'] = empty_list
+        print(self.df_info)
+        
 
 # %%[markdown]
 # # Train
@@ -19,37 +47,28 @@ pd.set_option('display.max_columns', 500)
 # %%
 phone_name = input('スマホの名前指定: ')
 
-train_dr_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_derived.csv')
-train_fix_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_Fix_add_columns.csv')
-train_orient_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_OrientationDeg_add_columns.csv')
-train_raw_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_Raw_add_columns.csv')
-train_status_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_Status_add_columns.csv')
-train_acc_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_UncalAccel_add_columns.csv')
-train_gyro_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_UncalGyro_add_columns.csv')
-train_mag_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_UncalMag_add_columns.csv')
-train_gt_df = pd.read_csv(f'../../data/interim/train/merged_{phone_name}_gt.csv')
-
-
+# %%
+# load
+mi8 = DataJoiner(phone_name, data_dir='train')
+org_df_dict = mi8.load_df_dict()
+org_df_dict
+# %%
 # shapeだけ表示
-display(train_dr_df.shape)
-display(train_fix_df.shape)
-display(train_orient_df.shape)
-display(train_raw_df.shape)
-display(train_status_df.shape)
-display(train_acc_df.shape)
-display(train_gyro_df.shape)
-display(train_mag_df.shape)
-display(train_gt_df.shape)
+for org_df in org_df_dict.values():
+    display(org_df.shape)
+
+# %%
+# df empty
+mi8.check_empty_df(org_df_dict)
+
+# %%
+# millisが正しい順か
+mi8.check_millis_order(org_df_dict)
 
 # %%[markdown]
 # ## derived
-
 # %%
-# derived empty
-print(train_dr_df.empty)
-
-# %%
-train_dr_df
+mi8.df_dict['derived']
 # %%
 # Labelig signalType
 lenc = LabelEncoder()
@@ -311,4 +330,4 @@ for key in df_dict.keys():
 # %%
 name = str(dt.now().strftime('%Y-%m-%d_%H'))
 
-merged_train_df.to_csv(f'../../data/processed/confirm/train/{name}_{phone_name}.csv', index=False)
+merged_train_df.to_csv(f'../../data/processed/confirm/train/{name}_{self.phone_name}.csv', index=False)
