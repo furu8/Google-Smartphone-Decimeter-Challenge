@@ -5,6 +5,7 @@ from datetime import datetime as dt
 from pandas.core.frame import DataFrame
 from sklearn.preprocessing import LabelEncoder
 from IPython.core.display import display
+import sys
 
 # 最大表示行数を設定
 pd.set_option('display.max_rows', 500)
@@ -93,7 +94,13 @@ class DataJoiner:
         self.df_dict[key] = df.copy()
 
     def check_millis_order(self):
-        diff_millis_list = [self.df_dict[key][self.df_dict[key]['millisSinceGpsEpoch'].diff()<0].empty for key in self.df_dict.keys()]
+        diff_millis_list = []
+        for key in self.df_dict.keys():
+            try:
+                diff_millis_list.append(self.df_dict[key][self.df_dict[key]['millisSinceGpsEpoch'].diff()<0].empty)
+            except:
+                diff_millis_list.append(True) # OrinetationDegにmillisSinceGpsEpochがないとき
+        
         self.df_info['isorder'] = diff_millis_list # Trueだと時間順
         print(self.df_info) 
 
@@ -123,15 +130,27 @@ def derived(joiner, org_df_dict):
 
 def fix(joiner, org_df_dict):
     key = 'Fix'
+    isempty = org_df_dict[key].empty
+    
+    if not isempty:
+        print(key)
+        sys.exit()
 
-    print(f'\n\n\n{key}: {org_df_dict[key].empty}\n\n\n') # Falseなことあんの？
+    print(f'\n\n\n{key}: {isempty}\n\n\n') # Falseなことあんの？
 
 
 def orientation_deg(joiner, org_df_dict):
     key = 'OrientationDeg'
 
-    # set
-    joiner.set_df_dict(key, org_df_dict[key])
+    isempty = org_df_dict[key].empty
+    
+    if not isempty:
+        # set
+        joiner.set_df_dict(key, org_df_dict[key])
+    
+    # else:    
+    #     print(key)
+    #     sys.exit()
 
 
 def raw(joiner, org_df_dict):
@@ -143,7 +162,11 @@ def raw(joiner, org_df_dict):
     joiner.interpolate_mean(key, 'AgcDb') 
 
     # Labeling CodeType
-    joiner.encode_CodeType()
+    try:
+        joiner.encode_CodeType()
+    except:
+        print('Pixel4XLModdedはCodeTypeがない')
+        pass
 
      # gropubys
     groupbyed_df = groupbys(joiner, joiner.df_dict[key])
@@ -243,7 +266,7 @@ def set_df_dict(joiner, org_df_dict, ddir):
     uncal_gyro(joiner, org_df_dict)
     # UncalMag
     uncal_mag(joiner, org_df_dict)
-
+    # ground_truth
     if ddir == 'train':
         ground_truth(joiner)
 
@@ -260,12 +283,12 @@ def merge_df_dict(joiner):
     return joiner.merge_df_dict()
 
 def _show_merged_columns(joiner):
+    print('結合しないカラム')
     for key in joiner.df_info[joiner.df_info['isempty']==True].index:
-        print('結合しないカラム')
         print(key)
 
+    print('結合するカラム')
     for key in joiner.df_info[joiner.df_info['isempty']==False].index:
-        print('結合するカラム')
         print(key)
 
 ############################################ 
@@ -309,5 +332,3 @@ for ddir in data_dir:
 
         # save
         merged_df.to_csv(f'../../data/interim/{ddir}/{pname}.csv', index=False)
-
-# %%
