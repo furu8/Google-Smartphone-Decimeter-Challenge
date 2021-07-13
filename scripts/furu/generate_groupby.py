@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime as dt
-from pandas.core.frame import DataFrame
 from sklearn.preprocessing import LabelEncoder
 from IPython.core.display import display
 import sys
@@ -44,11 +43,58 @@ class DataJoiner:
     def encode_CodeType(self):
         self.df_dict['Raw']['CodeType'] = self.df_dict['Raw']['CodeType'].fillna(0)
         for i, category in enumerate(self.df_dict['Raw']['CodeType'].unique()[1:]):
-            self.df_dict['Raw'].loc[self.df_dict['Raw']['CodeType']==category, 'CodeType'] = i
+            self.df_dict['Raw'].loc[self.df_dict['Raw']['CodeType']==category, 'CodeType'] = i + 1
     
-    def groupby_mean(self, df):
-        groupbyed_df = df.groupby('millisSinceGpsEpoch', as_index=False).mean()
-        return groupbyed_df
+        self.df_dict['Raw']['CodeType'] = self.df_dict['Raw']['CodeType'].astype(int)
+
+    def groupbys(self, gp_obj, calc_type):
+        if calc_type == 'mean':
+            return self.groupby_mean(gp_obj)
+        elif calc_type == 'max':
+            return self.groupby_max(gp_obj)
+        elif calc_type == 'min':
+            return self.groupby_min(gp_obj)
+        elif calc_type == 'median':
+            return self.groupby_median(gp_obj)
+        elif calc_type == 'mode':
+            return self.groupby_mode(gp_obj)
+        elif calc_type == 'std':
+            return self.groupby_std(gp_obj)
+        elif calc_type == 'var':
+            return self.groupby_var(gp_obj)
+        elif calc_type == 'skew':
+            return self.groupby_skew(gp_obj)
+        elif calc_type == 'kurt':
+            return self.groupby_kurt(gp_obj)
+        else:
+            raise('calc_typeが規定外')
+
+    def groupby_mean(self, gp_obj):
+        return gp_obj.mean()
+
+    def groupby_max(self, gp_obj):
+        return gp_obj.max()
+
+    def groupby_min(self, gp_obj):
+        return gp_obj.min()
+
+    def groupby_std(self, gp_obj):
+        return gp_obj.std()
+
+    def groupby_var(self, gp_obj):
+        return gp_obj.var()
+
+    def groupby_skew(self, gp_obj):
+        return gp_obj.skew()
+        
+    def groupby_kurt(self, gp_obj):
+        return gp_obj.apply(pd.DataFrame.kurt)
+        
+    def groupby_median(self, gp_obj):
+        return gp_obj.median()
+
+    def groupby_mode(self, gp_obj):
+        return gp_obj.apply(pd.DataFrame.mode)
 
     def merge_df(self, df1, df2):
         return pd.merge(df1, df2, on='millisSinceGpsEpoch')
@@ -62,7 +108,6 @@ class DataJoiner:
         base_df['elapsedRealtimeNanos'] = 0 # suffixesのために、適当な値を入れる
         for key in df_dict.keys():
             if not df_dict[key].empty:
-                print(df_dict[key].info())
                 base_df = pd.merge_asof(base_df, df_dict[key],
                                 on='millisSinceGpsEpoch',
                                 by=['phoneName', 'collectionName'],
@@ -129,6 +174,8 @@ def derived(joiner, org_df_dict):
 
 
 def fix(joiner, org_df_dict):
+    """fixは全部空
+    """
     key = 'Fix'
     isempty = org_df_dict[key].empty
     
@@ -170,6 +217,8 @@ def raw(joiner, org_df_dict):
 
      # gropubys
     groupbyed_df = groupbys(joiner, joiner.df_dict[key])
+
+    display(groupbyed_df)
 
     # merge (collectionName, phoneName)
     new_df = merge(joiner, groupbyed_df, org_df_dict, key) # new
@@ -241,19 +290,48 @@ def merge(joiner, df1, org_df_dict, key):
 def groupbys(joiner, df):
     """今後groupbyを複数回する可能性があるため用意
     """
-    
-    groupbyed_df = joiner.groupby_mean(df)
-    
+    calc_type_list = ['mean', 'max', 
+                'min', 'median', 'mode',
+                'std', 'var', 'skew', 'kurt'
+    ]
+    df = df.drop(['phoneName', 'collectionName'], axis=1) # 計算上邪魔なカラムを一旦削る
+
+    # groupybys
+    gp_obj = df.groupby('millisSinceGpsEpoch', as_index=False)
+    groupbyed_list = [joiner.groupbys(gp_obj, calc_type) for calc_type in calc_type_list]
+
+    # merge
+    groupbyed_df = _merge_4groupbys(groupbyed_list, calc_type_list)
+
+    # display(df.info())
+    # try:
+    #     groupbyed_df = df.groupby('millisSinceGpsEpoch', as_index=False).max()
+    # except:
+    #     display(type(df['CodeType'][0]))
+    #     display(type(df[df['CodeType']==1].iloc[0,0]))
+    #     df['CodeType'] = df['CodeType'].astype(int)
+    #     groupbyed_df = df.groupby('millisSinceGpsEpoch', as_index=False).max()
+
     return groupbyed_df
 
-
-############################################ 
+def _merge_4groupbys(groupbyed_list, calc_type_list):
+    df = groupbyed_list[0] # mean
+    print('mean')
+    
+    for gped_df, ctype in zip(groupbyed_list[1:], calc_type_list[1:]):
+        print(ctype)
+        df = pd.merge(df, gped_df, 
+                    on='millisSinceGpsEpoch', 
+                    suffixes=('', ctype))
+    return df
+    
+##################################### 
 
 def set_df_dict(joiner, org_df_dict, ddir):
     # derived
     derived(joiner, org_df_dict)
     # Fix
-    fix(joiner, org_df_dict)
+    # fix(joiner, org_df_dict) # 全部空
     # OrientaionDeg
     orientation_deg(joiner, org_df_dict)
     # Raw
@@ -269,7 +347,6 @@ def set_df_dict(joiner, org_df_dict, ddir):
     # ground_truth
     if ddir == 'train':
         ground_truth(joiner)
-
 
 def merge_df_dict(joiner):
     # 結合カラム紹介
@@ -331,4 +408,33 @@ for ddir in data_dir:
         merged_df = merge_df_dict(joiner)
 
         # save
-        merged_df.to_csv(f'../../data/interim/{ddir}/{pname}.csv', index=False)
+        # merged_df.to_csv(f'../../data/interim/{ddir}/{pname}.csv', index=False)
+
+# %%
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({'A':['a','b','c','a','b','c','a','b','c'], 
+                    'B':[1,2,3,4,5,6,7,8,9],
+                    'C':[1,np.int64(2),3,4,5,6,7,np.nan,9],
+                    'CodeType':[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,'C','Q']
+})
+
+print(df.info())
+print(df)
+
+df['CodeType'] = df['CodeType'].fillna(0)
+for i, c in enumerate(df['CodeType'].unique()[1:]):
+    df.loc[df['CodeType']==c, 'CodeType'] = i + 1
+
+print(df.info())
+print(df)
+
+print(type(df.iloc[0,-1]))
+print(type(df.iloc[-2,-1]))
+print(type(df.iloc[-1,-1]))
+
+print(df.groupby('A', as_index=False).max())
+
+df['CodeType'] = df[['CodeType']].astype(int)
+print(df.info())
