@@ -38,12 +38,10 @@ def evaluate_lat_lng_dist(df):
     return dist_list
 
 def main():
-    phone_name = 'Mi8'
+    train_df = pd.read_csv(f'../../data/processed/train/train_merged_base.csv')
+    # test_df = pd.read_csv(f'../../data/processed/test/test.csv') # 一旦無視
 
-    # pathはinterimではなくprocessedが正しいが動作用のため一旦これで
-    train_df = pd.read_csv(f'../../data/processed/confirm/train/2021-06-25_20_{phone_name}.csv')
-    # test_df = pd.read_csv(f'../../data/processed/confirm/test/2021-06-25_20_{phone_name}.csv') # 一旦無視
-    baseline_train_df = pd.read_csv('../../data/raw/baseline_locations_train.csv')
+    print(train_df.shape)
 
     # score_df = pd.DataFrame()
     # score_df['lat_pred'] = baseline_train_df.loc[baseline_train_df['phoneName']=='Mi8', 'latDeg'].values
@@ -59,8 +57,6 @@ def main():
     # print(dist95)
     # print((dist50 + dist95) / 2)
 
-    train_df['latDegBase'] = baseline_train_df.loc[baseline_train_df['phoneName']=='Mi8', 'latDeg'].values
-    train_df['lngDegBase'] = baseline_train_df.loc[baseline_train_df['phoneName']=='Mi8', 'lngDeg'].values
     train_x = train_df.drop(['latDeg', 'lngDeg', 'phoneName', 'collectionName'], axis=1)
     train_y = train_df[['latDeg', 'lngDeg']]
     run_name = 'lgb'
