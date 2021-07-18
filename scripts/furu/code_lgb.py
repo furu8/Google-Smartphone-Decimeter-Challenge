@@ -203,7 +203,7 @@ def prepare_imu_data(dataset_name, cname, pname, bl_df):
     return df_all
 
 # test
-a_df = prepare_imu_data('train', '2021-04-22-US-SJC-1', 'SamsungS20Ultra', bl_trn_df)
+# a_df = prepare_imu_data('train', '2021-04-22-US-SJC-1', 'SamsungS20Ultra', bl_trn_df)
 # a_df
 # %%
 # get_xyz関連
@@ -251,9 +251,9 @@ def get_xyz(df_all, dataset_name):
     return lat_lng_df, df_all
 
 # test
-b_df, c_df = get_xyz(a_df, 'train')
-display(b_df)
-display(c_df)
+# b_df, c_df = get_xyz(a_df, 'train')
+# display(b_df)
+# display(c_df)
 
 # %%
 %%time
@@ -317,8 +317,8 @@ def prepare_df_train(df_all_train, window_size):
     return df_train
 
 # test
-d_df = prepare_df_train(c_df, 30)
-d_df
+# d_df = prepare_df_train(c_df, 30)
+# d_df
 
 # %%
 # prepare_df_test関連
@@ -463,11 +463,11 @@ def training(df_train, df_test, tgt_axis):
     return df_train, df_test, pred_valid, pred_test
 
 # test
-df_train, df_test, pred_valid, pred_test = training(d_df, df_test, 'X')
-display(df_train)
-display(df_test)
-display(pred_valid)
-display(pred_test)
+# df_train, df_test, pred_valid, pred_test = training(d_df, df_test, 'X')
+# display(df_train)
+# display(df_test)
+# display(pred_valid)
+# display(pred_test)
 
 # %%
 # From：https://www.kaggle.com/emaerthin/demonstration-of-the-kalman-filter
@@ -653,9 +653,15 @@ tmp5 = pd.concat([tmp3, tmp4])
 visualize_collection(tmp5)
 
 # %%
+cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
+cn2pn_tst_df
+
+# %%
+bl_tst_df[bl_tst_df['phone']==cname_test + '_' + pname_test].index
+# %%
 # subに代入
-bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cname_test + '_' + pname_test].index[window_size:],3] = test_pred_df['latDeg'].values
-bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cname_test + '_' + pname_test].index[window_size:],4] = test_pred_df['lngDeg'].values
+bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cname_test + '_' + pname_test].index[window_size:], 3] = test_pred_df['latDeg'].values
+bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cname_test + '_' + pname_test].index[window_size:], 4] = test_pred_df['lngDeg'].values
 
 # %%
 # save
