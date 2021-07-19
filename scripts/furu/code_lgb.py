@@ -1,8 +1,10 @@
 # %%
+from lightgbm.plotting import plot_importance
 import numpy as np
 from cv2 import Rodrigues
 import pandas as pd
 from pathlib import Path
+from pandas.core.algorithms import mode
 import pyproj
 from pyproj import Proj, transform
 import matplotlib.pyplot as plt
@@ -433,7 +435,7 @@ def training(df_train, df_test, tgt_axis):
 
     pred_valid = np.zeros((len(df_train),)) 
     pred_test = np.zeros((len(df_test),)) 
-    scores = []
+    scores, models = [], []
     for fold_id, (trn_idx, val_idx) in enumerate(kfold.split(df_train, df_train[target])):
         X_train = df_train.iloc[trn_idx][feature_names]
         Y_train = df_train.iloc[trn_idx][target]
@@ -453,14 +455,15 @@ def training(df_train, df_test, tgt_axis):
         pred_test += lgb_model.predict(df_test[feature_names], num_iteration = lgb_model.best_iteration_)
 
         scores.append(lgb_model.best_score_['valid']['l2'])
+        models.append(model)
     
-    pred_test = pred_test /  kfold.n_splits
+    pred_test = pred_test / kfold.n_splits
     
     if verbose_flag == True:
         print("Each Fold's MSE：{}, Average MSE：{:.4f}".format([np.round(v,2) for v in scores], np.mean(scores)))
         print("-"*60)
     
-    return df_train, df_test, pred_valid, pred_test
+    return df_train, df_test, pred_valid, pred_test, models
 
 # test
 # df_train, df_test, pred_valid, pred_test = training(d_df, df_test, 'X')
@@ -569,11 +572,9 @@ print('df_test:', df_test.shape)
 print('df_test.columns:', df_test.columns)
 
 # %%
-df_train
-# %%
-df_train_x, df_test_x, pred_valid_x, pred_test_x = training(df_train, df_test, 'X')
-df_train_y, df_test_y, pred_valid_y, pred_test_y = training(df_train, df_test, 'Y')
-df_train_z, df_test_z, pred_valid_z, pred_test_z = training(df_train, df_test, 'Z')
+df_train_x, df_test_x, pred_valid_x, pred_test_x, models_x = training(df_train, df_test, 'X')
+df_train_y, df_test_y, pred_valid_y, pred_test_y, models_y = training(df_train, df_test, 'Y')
+df_train_z, df_test_z, pred_valid_z, pred_test_z, models_z = training(df_train, df_test, 'Z')
 # %%
 val_compare_df = pd.DataFrame({'Xgt':df_train_x['Xgt'].values, 'Xpred':pred_valid_x,
                                'Ygt':df_train_y['Ygt'].values, 'Ypred':pred_valid_y,
@@ -585,6 +586,29 @@ val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
 val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
 # %%
 val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
+
+# %%
+def plot_imortances(models):
+    for model in models:
+        lgb.plot_importance(model, height=0.5, figsize=(4,8))
+        plt.show()
+
+def print_importances(models, cols):
+    for i, model in enumerate(models):
+        print('fold ', i+1)
+        importance = pd.DataFrame(model.feature_importances_, index=cols, columns=['importance'])
+        importance = importance.sort_values('importance', ascending=False)
+        display(importance.head(20))
+
+# %%
+# x model
+# plot_imortances(models_x)
+
+# %%
+# feature importanceを表示
+print_importances(models_x, df_test_x.columns)
+print_importances(models_y, df_test_y.columns)
+print_importances(models_z, df_test_z.columns)
 
 # %%
 # xyz -> lng, lat
