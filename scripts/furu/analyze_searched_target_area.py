@@ -12,6 +12,7 @@ from sklearn.model_selection import KFold, TimeSeriesSplit
 from sklearn.metrics import accuracy_score
 import lightgbm as lgb
 from tqdm import tqdm
+import simdkalman
 import warnings
 warnings.filterwarnings("ignore", category=Warning)
 
@@ -80,8 +81,6 @@ tr_df.describe()
 tr_df['dist'].hist()
 
 # %%
-
-# %%
 score_list = []
 std_list = []
 for cn in cn_list:
@@ -146,3 +145,63 @@ cn2pn_df
 
 # %%
 cn2pn_df['avg_dist_50_90'].hist()
+
+# %%
+def kalman():
+    T = 1.0
+    state_transition = np.array([[1, 0, T, 0, 0.5 * T ** 2, 0], [0, 1, 0, T, 0, 0.5 * T ** 2], [0, 0, 1, 0, T, 0],
+                                [0, 0, 0, 1, 0, T], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1]])
+    process_noise = np.diag([1e-5, 1e-5, 5e-6, 5e-6, 1e-6, 1e-6]) + np.ones((6, 6)) * 1e-9
+    observation_model = np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0]])
+    observation_noise = np.diag([5e-5, 5e-5]) + np.ones((2, 2)) * 1e-9
+
+    kf = simdkalman.KalmanFilter(
+            state_transition = state_transition,
+            process_noise = process_noise,
+            observation_model = observation_model,
+            observation_noise = observation_noise)
+    return kf
+
+def apply_kf_smoothing(df, kf_):
+    unique_paths = df[['collectionName', 'phoneName']].drop_duplicates().to_numpy()
+    for collection, phone in tqdm(unique_paths):
+        cond = np.logical_and(df['collectionName'] == collection, df['phoneName'] == phone)
+        data = df[cond][['latDeg_pred', 'lngDeg_pred']].to_numpy()
+        data = data.reshape(1, len(data), 2)
+        smoothed = kf_.smooth(data)
+        df.loc[cond, 'latDeg_pred'] = smoothed.states.mean[0, :, 0]
+        df.loc[cond, 'lngDeg_pred'] = smoothed.states.mean[0, :, 1]
+    return df
+
+# %%
+kf = kalman()
+kalmaned_df = apply_kf_smoothing(tr_df, kf)
+kalmaned_df
+# %%
+score_list = []
+std_list = []
+for cn, pn in cn2pn_df[['collectionName', 'phoneName']].values:
+    onecn_df = kalmaned_df[(kalmaned_df['collectionName']==cn)&(kalmaned_df['phoneName']==pn)]
+   
+    lat = onecn_df['latDeg'].values
+    lng = onecn_df['lngDeg'].values
+    lat_pred = onecn_df['latDeg_pred'].values
+    lng_pred = onecn_df['lngDeg_pred'].values
+    onecn_df['dist'] = calc_haversine(lat, lng, lat_pred, lng_pred)
+
+    print(f'\n{cn}, {pn}')
+    print('dist_50:',np.percentile(onecn_df['dist'],50) )
+    print('dist_95:',np.percentile(onecn_df['dist'],95) )
+    print('avg_dist_50_95:',(np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
+    print('avg_dist:', onecn_df['dist'].mean())
+
+    score_list.append((np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
+    std_list.append(lat.std())
+
+# %%
+cn2pn_df['avg_dist_50_90_kalman'] = score_list
+cn2pn_df['std_kalman'] = std_list
+cn2pn_df
+
+# %%
+cn2pn_df.loc[cn2pn_df['avg_dist_50_90']>5.0, ['collectionName', 'phoneName', 'avg_dist_50_90', 'avg_dist_50_90_kalman', 'd']]
