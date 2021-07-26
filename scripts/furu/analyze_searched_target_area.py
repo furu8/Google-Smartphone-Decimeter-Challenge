@@ -1,8 +1,10 @@
 # %%
 import numpy as np
 from cv2 import Rodrigues
+from numpy.core.numeric import ones
 import pandas as pd
 from pathlib import Path
+from pandas.io.parsers import count_empty_vals
 import pyproj
 from pyproj import Proj, transform
 import matplotlib.pyplot as plt
@@ -12,8 +14,9 @@ from sklearn.model_selection import KFold, TimeSeriesSplit
 from sklearn.metrics import accuracy_score
 import lightgbm as lgb
 from tqdm import tqdm
+import glob as gb
 import simdkalman
-import warnings
+import re
 warnings.filterwarnings("ignore", category=Warning)
 
 # 最大表示行数を設定
@@ -35,8 +38,46 @@ def calc_haversine(lat1, lon1, lat2, lon2):
     c = 2 * np.arcsin(a**0.5)
     dist = 6_367_000 * c
     return dist
+
+# %%
+def scoreing_dist(tr_df, cn_list, key_list):
+    score_df = pd.DataFrame(cn_list, columns=['collectionName'])
+    features = []
+
+    for key in key_list:
+        print(key)
+        score_list = []
+        for cn in cn_list:
+            onecn_df = tr_df[tr_df['collectionName']==cn]
+            lat = onecn_df['latDeg'].values
+            lng = onecn_df['lngDeg'].values
+            lat_pred = onecn_df[f'latDeg_{key}'].values
+            lng_pred = onecn_df[f'lngDeg_{key}'].values
+            
+            onecn_df['dist'] = calc_haversine(lat, lng, lat_pred, lng_pred)
+
+            dist_50 = np.percentile(onecn_df['dist'], 50)
+            dist_95 = np.percentile(onecn_df['dist'], 95)
+            dist_50_95 = (dist_50 + dist_95) / 2
+
+            print(f'\n{cn}')
+            print('dist_50:', dist_50)
+            print('dist_95:', dist_95)
+            print('avg_dist_50_95:', dist_50_95) 
+            print('avg_dist:', onecn_df['dist'].mean())
+
+            score_list.append(dist_50_95)
+
+        features.append(f'latDeg_{key}')
+        features.append(f'lngDeg_{key}')
+        score_df[f'avg_dist50_95_{key}'] = score_list
+    
+    return score_df
+
+    
 # %%
 tr_df = pd.read_csv('../../data/processed/train/train_merged_base.csv')[['millisSinceGpsEpoch', 'collectionName', 'phoneName', 'latDeg', 'lngDeg', 'latDeg_pred', 'lngDeg_pred']]
+tr_df = tr_df.rename(columns={'latDeg_pred':'latDeg_base', 'lngDeg_pred':'lngDeg_base'})
 tr_df
 
 # %%
@@ -47,161 +88,41 @@ cn2pn_df
 # %%
 cn_list = tr_df['collectionName'].unique()
 cn_list
+# %%
+train_pahts = gb.glob('../../data/interim/*_train.csv')
+
+latlng_dict = {}
+for train_path in train_pahts:
+    key = re.split('/|_train', train_path)[4]
+    print(key)
+    latlng_dict[key] = pd.read_csv(train_path)
 
 # %%
-# dist_list = []
-# for cn in cn_list:
-#     lat = tr_df.loc[tr_df['collectionName']==cn, 'latDeg'].values
-#     lng = tr_df.loc[tr_df['collectionName']==cn, 'lngDeg'].values
-#     lat_pred = tr_df.loc[tr_df['collectionName']==cn, 'latDeg_pred'].values
-#     lng_pred = tr_df.loc[tr_df['collectionName']==cn, 'lngDeg_pred'].values
-
-#     dist_list.append(calc_haversine(lat, lng, lat_pred, lng_pred))
-
+# rename
+for key in latlng_dict.keys():
+    print(key)
+    latlng_dict[key] = latlng_dict[key].rename(columns={'latDeg':f'latDeg_{key}', 'lngDeg':f'lngDeg_{key}'})
+    display(latlng_dict[key])
 
 # %%
-lat = tr_df['latDeg'].values
-lng = tr_df['lngDeg'].values
-lat_pred = tr_df['latDeg_pred'].values
-lng_pred = tr_df['lngDeg_pred'].values
-
-tr_df['dist'] = calc_haversine(lat, lng, lat_pred, lng_pred)
+# merge
+for key, value in latlng_dict.items():
+    print(key)
+    display(value)
+    tr_df = pd.merge_asof(
+                    tr_df,
+                    value[[f'latDeg_{key}', f'lngDeg_{key}', 'millisSinceGpsEpoch', 'collectionName', 'phoneName']].sort_values('millisSinceGpsEpoch'),
+                    on='millisSinceGpsEpoch',
+                    by=['collectionName', 'phoneName'],
+                    direction='nearest'
+    )
 tr_df
 
 # %%
-print('dist_50:',np.percentile(tr_df['dist'],50) )
-print('dist_95:',np.percentile(tr_df['dist'],95) )
-print('avg_dist_50_95:',(np.percentile(tr_df['dist'],50) + np.percentile(tr_df['dist'],95))/2)
-print('avg_dist:', tr_df['dist'].mean())
-
-# %%
-tr_df.describe()
-
-# %%
-tr_df['dist'].hist()
-
-# %%
-score_list = []
-std_list = []
-for cn in cn_list:
-    onecn_df = tr_df[tr_df['collectionName']==cn]
-    lat = onecn_df['latDeg'].values
-    lng = onecn_df['lngDeg'].values
-    lat_pred = onecn_df['latDeg_pred'].values
-    lng_pred = onecn_df['lngDeg_pred'].values
-    onecn_df['dist'] = calc_haversine(lat, lng, lat_pred, lng_pred)
-
-    print(f'\n{cn}')
-    print('dist_50:',np.percentile(onecn_df['dist'],50) )
-    print('dist_95:',np.percentile(onecn_df['dist'],95) )
-    print('avg_dist_50_95:',(np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
-    print('avg_dist:', onecn_df['dist'].mean())
-
-    score_list.append((np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
-    std_list.append(lat.std())
-
-# %%
-score_df = pd.DataFrame(score_list, columns=['avg_dist_50_95'])
-score_df['collectionName'] = cn_list
-score_df['std'] = std_list
-score_df['a'] = 0
+score_df = scoreing_dist(tr_df, cn_list, latlng_dict.keys())
 score_df
 # %%
-print(score_df)
+# Notion用
+score_df['amari'] = 0
+score_df
 # %%
-score_df['avg_dist_50_95'].hist()
-# %%
-score_df[['avg_dist_50_95', 'std']].corr()
-
-# %%
-pn_list = tr_df['phoneName'].unique()
-pn_list
-
-# %%
-score_list = []
-std_list = []
-for cn, pn in cn2pn_df.values:
-    onecn_df = tr_df[(tr_df['collectionName']==cn)&(tr_df['phoneName']==pn)]
-   
-    lat = onecn_df['latDeg'].values
-    lng = onecn_df['lngDeg'].values
-    lat_pred = onecn_df['latDeg_pred'].values
-    lng_pred = onecn_df['lngDeg_pred'].values
-    onecn_df['dist'] = calc_haversine(lat, lng, lat_pred, lng_pred)
-
-    print(f'\n{cn}, {pn}')
-    print('dist_50:',np.percentile(onecn_df['dist'],50) )
-    print('dist_95:',np.percentile(onecn_df['dist'],95) )
-    print('avg_dist_50_95:',(np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
-    print('avg_dist:', onecn_df['dist'].mean())
-
-    score_list.append((np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
-    std_list.append(lat.std())
-
-# %%
-cn2pn_df['avg_dist_50_90'] = score_list
-cn2pn_df['std'] = std_list
-cn2pn_df
-
-# %%
-cn2pn_df['avg_dist_50_90'].hist()
-
-# %%
-def kalman():
-    T = 1.0
-    state_transition = np.array([[1, 0, T, 0, 0.5 * T ** 2, 0], [0, 1, 0, T, 0, 0.5 * T ** 2], [0, 0, 1, 0, T, 0],
-                                [0, 0, 0, 1, 0, T], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1]])
-    process_noise = np.diag([1e-5, 1e-5, 5e-6, 5e-6, 1e-6, 1e-6]) + np.ones((6, 6)) * 1e-9
-    observation_model = np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0]])
-    observation_noise = np.diag([5e-5, 5e-5]) + np.ones((2, 2)) * 1e-9
-
-    kf = simdkalman.KalmanFilter(
-            state_transition = state_transition,
-            process_noise = process_noise,
-            observation_model = observation_model,
-            observation_noise = observation_noise)
-    return kf
-
-def apply_kf_smoothing(df, kf_):
-    unique_paths = df[['collectionName', 'phoneName']].drop_duplicates().to_numpy()
-    for collection, phone in tqdm(unique_paths):
-        cond = np.logical_and(df['collectionName'] == collection, df['phoneName'] == phone)
-        data = df[cond][['latDeg_pred', 'lngDeg_pred']].to_numpy()
-        data = data.reshape(1, len(data), 2)
-        smoothed = kf_.smooth(data)
-        df.loc[cond, 'latDeg_pred'] = smoothed.states.mean[0, :, 0]
-        df.loc[cond, 'lngDeg_pred'] = smoothed.states.mean[0, :, 1]
-    return df
-
-# %%
-kf = kalman()
-kalmaned_df = apply_kf_smoothing(tr_df, kf)
-kalmaned_df
-# %%
-score_list = []
-std_list = []
-for cn, pn in cn2pn_df[['collectionName', 'phoneName']].values:
-    onecn_df = kalmaned_df[(kalmaned_df['collectionName']==cn)&(kalmaned_df['phoneName']==pn)]
-   
-    lat = onecn_df['latDeg'].values
-    lng = onecn_df['lngDeg'].values
-    lat_pred = onecn_df['latDeg_pred'].values
-    lng_pred = onecn_df['lngDeg_pred'].values
-    onecn_df['dist'] = calc_haversine(lat, lng, lat_pred, lng_pred)
-
-    print(f'\n{cn}, {pn}')
-    print('dist_50:',np.percentile(onecn_df['dist'],50) )
-    print('dist_95:',np.percentile(onecn_df['dist'],95) )
-    print('avg_dist_50_95:',(np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
-    print('avg_dist:', onecn_df['dist'].mean())
-
-    score_list.append((np.percentile(onecn_df['dist'],50) + np.percentile(onecn_df['dist'],95))/2)
-    std_list.append(lat.std())
-
-# %%
-cn2pn_df['avg_dist_50_90_kalman'] = score_list
-cn2pn_df['std_kalman'] = std_list
-cn2pn_df
-
-# %%
-cn2pn_df.loc[cn2pn_df['avg_dist_50_90']>5.0, ['collectionName', 'phoneName', 'avg_dist_50_90', 'avg_dist_50_90_kalman', 'd']]
