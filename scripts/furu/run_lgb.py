@@ -13,17 +13,26 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 
 
-def load_dfs():
-    x_train_df = pd.read_csv(f'../../data/processed/train/imu_x.csv')
-    x_test_df = pd.read_csv(f'../../data/processed/test/imu_x.csv')
-    y_train_df = pd.read_csv(f'../../data/processed/train/imu_y.csv')
-    y_test_df = pd.read_csv(f'../../data/processed/test/imu_y.csv')
-    z_train_df = pd.read_csv(f'../../data/processed/train/imu_z.csv')
-    z_test_df = pd.read_csv(f'../../data/processed/test/imu_z.csv')
+def load_dfs(drived_id):
+    x_train_df = pd.read_csv(f'../../data/processed/train/imu_x_aga_pred_phone.csv')
+    x_test_df = pd.read_csv(f'../../data/processed/test/imu_x_aga_pred_phone.csv')
+    y_train_df = pd.read_csv(f'../../data/processed/train/imu_y_aga_pred_phone.csv')
+    y_test_df = pd.read_csv(f'../../data/processed/test/imu_y_aga_pred_phone.csv')
+    z_train_df = pd.read_csv(f'../../data/processed/train/imu_z_aga_pred_phone.csv')
+    z_test_df = pd.read_csv(f'../../data/processed/test/imu_z_aga_pred_phone.csv')
 
-    x_train_df, x_test_df = extract_SJC(x_train_df, x_test_df)
-    y_train_df, y_test_df = extract_SJC(y_train_df, y_test_df)
-    z_train_df, z_test_df = extract_SJC(z_train_df, z_test_df)
+    if drived_id == 'SJC':
+        x_train_df, x_test_df = extract_SJC(x_train_df, x_test_df)
+        y_train_df, y_test_df = extract_SJC(y_train_df, y_test_df)
+        z_train_df, z_test_df = extract_SJC(z_train_df, z_test_df)
+    elif drived_id == 'MTV':
+        x_train_df, x_test_df = extract_MTV(x_train_df, x_test_df)
+        y_train_df, y_test_df = extract_MTV(y_train_df, y_test_df)
+        z_train_df, z_test_df = extract_MTV(z_train_df, z_test_df)
+    elif drived_id == 'SVL':
+        x_train_df, x_test_df = extract_SVL(x_train_df, x_test_df)
+        y_train_df, y_test_df = extract_SVL(y_train_df, y_test_df)
+        z_train_df, z_test_df = extract_SVL(z_train_df, z_test_df)
 
     return x_train_df, x_test_df, y_train_df, y_test_df, z_train_df, z_test_df
 
@@ -45,6 +54,44 @@ def extract_SJC(train_df, test_df):
     # test_df = test_df.drop(['collectionName', 'phoneName'], axis=1)
 
     return train_df, test_df
+
+def extract_MTV(train_df, test_df):
+    # extract
+    train_df = train_df[
+                    (train_df['collectionName']=='2021-04-15-US-MTV-1')
+                    | (train_df['collectionName']=='2021-04-28-US-MTV-1')
+                    | (train_df['collectionName']=='2021-04-29-US-MTV-1')
+                ]
+    test_df = test_df[
+                    (test_df['collectionName']=='2021-03-16-US-MTV-2')
+                    | (test_df['collectionName']=='2021-04-08-US-MTV-1')
+                    | (test_df['collectionName']=='2021-04-21-US-MTV-2')
+                    | (test_df['collectionName']=='2021-04-28-US-MTV-2')
+                    | (test_df['collectionName']=='2021-04-29-US-MTV-2')
+                ]
+
+    # drop
+    # train_df = train_df.drop(['collectionName', 'phoneName'], axis=1)
+    # test_df = test_df.drop(['collectionName', 'phoneName'], axis=1)
+
+    return train_df, test_df
+
+
+def extract_SVL(train_df, test_df):
+    # extract
+    train_df = train_df[
+                    (train_df['collectionName']=='2021-03-10-US-SVL-1')
+                ]
+    test_df = test_df[
+                    (test_df['collectionName']=='2021-04-26-US-SVL-2')
+                ]
+
+    # drop
+    # train_df = train_df.drop(['collectionName', 'phoneName'], axis=1)
+    # test_df = test_df.drop(['collectionName', 'phoneName'], axis=1)
+
+    return train_df, test_df
+
 
 def evaluate_lat_lng_dist(df):
     """
@@ -77,7 +124,7 @@ def train_cv(df_train, df_test, tgt_axis, params):
     feature_names = df_train.drop(['Xgt', 'Ygt', 'Zgt'], axis=1).columns # gt除外
     target = '{}gt'.format(tgt_axis)
 
-    kfold = KFold(n_splits=2, shuffle=True, random_state=params['seed'])
+    kfold = KFold(n_splits=4, shuffle=True, random_state=params['seed'])
 
     pred_valid = np.zeros((len(df_train),)) 
     pred_test = np.zeros((len(df_test),)) 
@@ -144,12 +191,22 @@ def calc_haversine(lat1, lon1, lat2, lon2):
 # %%
 def main():
     window_size = 30
-    x_train_df, x_test_df, y_train_df, y_test_df , z_train_df, z_test_df = load_dfs()
-    bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv')
-    cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
-
-    # display(train_df)
-    # print(test_df.columns)
+    cns_dict = {
+        'SJC': [
+                '2021-04-02-US-SJC-1', 
+                '2021-04-22-US-SJC-2', 
+                '2021-04-29-US-SJC-3'
+            ],
+        'MTV': [
+                '2021-03-16-US-MTV-2', 
+                '2021-04-08-US-MTV-1', 
+                '2021-04-21-US-MTV-1', 
+                '2021-04-28-US-MTV-2', 
+                '2021-04-29-US-MTV-2'
+            ],
+        'SVL': ['2021-04-26-US-SVL-2'],
+    }
+    # '2021-03-25-US-PAO-1'
 
     params = {
         'metric':'mse',
@@ -163,72 +220,82 @@ def main():
         'reg_lambda': 10
     }
 
-    # drop
-    x_train_df_droped = x_train_df.drop(['collectionName', 'phoneName'], axis=1)
-    x_test_df_droped = x_test_df.drop(['collectionName', 'phoneName'], axis=1)
-    y_train_df_droped = y_train_df.drop(['collectionName', 'phoneName'], axis=1)
-    y_test_df_droped = y_test_df.drop(['collectionName', 'phoneName'], axis=1)
-    z_train_df_droped = z_train_df.drop(['collectionName', 'phoneName'], axis=1)
-    z_test_df_droped = z_test_df.drop(['collectionName', 'phoneName'], axis=1)
+    bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv')
+    cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 
-    df_train_x, df_test_x, pred_valid_x, pred_test_x, models_x = train_cv(x_train_df_droped, x_test_df_droped, 'X', params)
-    df_train_y, df_test_y, pred_valid_y, pred_test_y, models_y = train_cv(y_train_df_droped, y_test_df_droped, 'Y', params)
-    df_train_z, df_test_z, pred_valid_z, pred_test_z, models_z = train_cv(z_train_df_droped, z_test_df_droped, 'Z', params)
+    for drived_id in cns_dict.keys():
 
-    val_compare_df = pd.DataFrame({'Xgt':df_train_x['Xgt'].values, 'Xpred':pred_valid_x,
-                               'Ygt':df_train_y['Ygt'].values, 'Ypred':pred_valid_y,
-                                'Zgt':df_train_z['Zgt'].values, 'Zpred':pred_valid_z
-                            })
+        x_train_df, x_test_df, y_train_df, y_test_df , z_train_df, z_test_df = load_dfs(drived_id)
 
-    # feature importanceを表示
-    print_importances(models_x, df_test_x.columns)
-    print_importances(models_y, df_test_y.columns)
-    print_importances(models_z, df_test_z.columns)
+        # display(train_df)
+        # print(test_df.columns)
 
-    # # xyz -> lng, lat
-    # lng_gt, lat_gt, _ = ECEF_to_WGS84(val_compare_df['Xgt'].values,val_compare_df['Ygt'].values,val_compare_df['Zgt'].values)
-    # lng_pred, lat_pred, _ = ECEF_to_WGS84(val_compare_df['Xpred'].values,val_compare_df['Ypred'].values,val_compare_df['Zpred'].values)
-    # lng_test_pred, lat_test_pred, _ = ECEF_to_WGS84(pred_test_x, pred_test_y, pred_test_z)
+        # drop
+        x_train_df_droped = x_train_df.drop(['collectionName', 'phoneName'], axis=1)
+        x_test_df_droped = x_test_df.drop(['collectionName', 'phoneName'], axis=1)
+        y_train_df_droped = y_train_df.drop(['collectionName', 'phoneName'], axis=1)
+        y_test_df_droped = y_test_df.drop(['collectionName', 'phoneName'], axis=1)
+        z_train_df_droped = z_train_df.drop(['collectionName', 'phoneName'], axis=1)
+        z_test_df_droped = z_test_df.drop(['collectionName', 'phoneName'], axis=1)
 
-    # val_compare_df['latDeg_gt'] = lat_gt
-    # val_compare_df['lngDeg_gt'] = lng_gt
-    # val_compare_df['latDeg_pred'] = lat_pred
-    # val_compare_df['lngDeg_pred'] = lng_pred
-    # test_pred_df = pd.DataFrame({'latDeg':lat_test_pred, 'lngDeg':lng_test_pred})
+        df_train_x, df_test_x, pred_valid_x, pred_test_x, models_x = train_cv(x_train_df_droped, x_test_df_droped, 'X', params)
+        df_train_y, df_test_y, pred_valid_y, pred_test_y, models_y = train_cv(y_train_df_droped, y_test_df_droped, 'Y', params)
+        df_train_z, df_test_z, pred_valid_z, pred_test_z, models_z = train_cv(z_train_df_droped, z_test_df_droped, 'Z', params)
 
-    # # 予測値にcollectionNameとphoneNameを結合
-    # test_pred_df = pd.concat([test_pred_df, x_test_df[['collectionName', 'phoneName']]], axis=1)
+        val_compare_df = pd.DataFrame({'Xgt':df_train_x['Xgt'].values, 'Xpred':pred_valid_x,
+                                'Ygt':df_train_y['Ygt'].values, 'Ypred':pred_valid_y,
+                                    'Zgt':df_train_z['Zgt'].values, 'Zpred':pred_valid_z
+                                })
 
-    # # plot
-    # # val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
-    # # plt.show()
-    # # val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
-    # # plt.show()
-    # # val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
-    # # plt.show()
+        # feature importanceを表示
+        print_importances(models_x, df_test_x.columns)
+        print_importances(models_y, df_test_y.columns)
+        print_importances(models_z, df_test_z.columns)
 
-    # # IMU Prediction vs. GT
-    # val_compare_df['dist'] = calc_haversine(val_compare_df['latDeg_gt'], val_compare_df['lngDeg_gt'], 
-    #                                 val_compare_df['latDeg_pred'], val_compare_df['lngDeg_pred'])
-    # # IMU预测vsGT（多collection）
-    # print('dist_50:',np.percentile(val_compare_df['dist'],50) )
-    # print('dist_95:',np.percentile(val_compare_df['dist'],95) )
-    # print('avg_dist_50_95:',(np.percentile(val_compare_df['dist'],50) + np.percentile(val_compare_df['dist'],95))/2)
-    # print('avg_dist:', val_compare_df['dist'].mean())
+        # xyz -> lng, lat
+        lng_gt, lat_gt, _ = ECEF_to_WGS84(val_compare_df['Xgt'].values,val_compare_df['Ygt'].values,val_compare_df['Zgt'].values)
+        lng_pred, lat_pred, _ = ECEF_to_WGS84(val_compare_df['Xpred'].values,val_compare_df['Ypred'].values,val_compare_df['Zpred'].values)
+        lng_test_pred, lat_test_pred, _ = ECEF_to_WGS84(pred_test_x, pred_test_y, pred_test_z)
 
-    # # subに代入
-    # # SJC
-    # for cn in ['2021-04-02-US-SJC-2', '2021-04-22-US-SJC-2', '2021-04-29-US-SJC-3']:
-    #     pns = cn2pn_tst_df.loc[cn2pn_tst_df['collectionName'] == cn, 'phoneName'].values
-    #     for pn in pns:
-    #         # print(len(bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3]))
-    #         # print(len(test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg']))
-    #         bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg'].values
-    #         bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 4] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'lngDeg'].values
+        val_compare_df['latDeg_gt'] = lat_gt
+        val_compare_df['lngDeg_gt'] = lng_gt
+        val_compare_df['latDeg_pred'] = lat_pred
+        val_compare_df['lngDeg_pred'] = lng_pred
+        test_pred_df = pd.DataFrame({'latDeg':lat_test_pred, 'lngDeg':lng_test_pred})
 
-    # # save
+        # 予測値にcollectionNameとphoneNameを結合
+        test_pred_df = pd.concat([test_pred_df, x_test_df[['collectionName', 'phoneName']]], axis=1)
+
+        # plot
+        # val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
+        # plt.show()
+        # val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
+        # plt.show()
+        # val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
+        # plt.show()
+
+        # IMU Prediction vs. GT
+        val_compare_df['dist'] = calc_haversine(val_compare_df['latDeg_gt'], val_compare_df['lngDeg_gt'], 
+                                        val_compare_df['latDeg_pred'], val_compare_df['lngDeg_pred'])
+        # IMU预测vsGT（多collection）
+        print('dist_50:',np.percentile(val_compare_df['dist'],50) )
+        print('dist_95:',np.percentile(val_compare_df['dist'],95) )
+        print('avg_dist_50_95:',(np.percentile(val_compare_df['dist'],50) + np.percentile(val_compare_df['dist'],95))/2)
+        print('avg_dist:', val_compare_df['dist'].mean())
+
+        # subに代入
+        # SJC
+        for cn in :
+            pns = cn2pn_tst_df.loc[cn2pn_tst_df['collectionName'] == cn, 'phoneName'].values
+            for pn in pns:
+                print(len(bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3]))
+                print(len(test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg']))
+                bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg'].values
+                bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 4] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'lngDeg'].values
+
+    # save
     # bl_tst_df = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']]
-    # bl_tst_df.to_csv(f'../../data/submission/imu.csv', index=False)
+    # bl_tst_df.to_csv(f'../../data/submission/imu_aga_pred_phone.csv', index=False)
 
 
 if __name__ == '__main__':

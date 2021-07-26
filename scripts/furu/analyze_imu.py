@@ -3,7 +3,7 @@ import numpy as np
 from cv2 import Rodrigues
 import pandas as pd
 from pathlib import Path
-from pandas.core.algorithms import mode
+from pandas.core.algorithms import mode, value_counts
 import pyproj
 from pyproj import Proj, transform
 import matplotlib.pyplot as plt
@@ -13,6 +13,7 @@ from sklearn.model_selection import KFold, TimeSeriesSplit
 from sklearn.metrics import accuracy_score
 import lightgbm as lgb
 from tqdm import tqdm
+
 from scipy.ndimage import gaussian_filter1d
 import warnings
 warnings.filterwarnings("ignore", category=Warning)
@@ -354,7 +355,7 @@ def add_stat_feats(data, tgt_axis):
         data[f + '_' + str(window_size) + '_median'] = data[[f + f'_{i}' for i in range(1,window_size)]].median(axis=1)
         data[f + '_' + str(window_size) + '_skew'] = data[[f + f'_{i}' for i in range(1,window_size)]].skew(axis=1)
         data[f + '_' + str(window_size) + '_kurt'] = data[[f + f'_{i}' for i in range(1,window_size)]].kurt(axis=1)
-        data[f + '_max-min'] = data[f + '_30_max'] - data[f + '_30_min']
+        data[f + '_max_min'] = data[f + '_30_max'] - data[f + '_30_min']
     
     return data
 
@@ -421,6 +422,17 @@ print('Baseline Test shape:', bl_tst_df.shape)
 print('Test shape:', sample_df.shape)
 
 # %%
+aga_pred_phone_trn_df = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean_train.csv')
+aga_pred_phone_trn_df['phone'] = bl_trn_df['phone'].values
+aga_pred_phone_trn_df['heightAboveWgs84EllipsoidM'] = bl_trn_df['heightAboveWgs84EllipsoidM'].values
+aga_pred_phone_trn_df
+
+# %%
+aga_pred_phone_tst_df = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean.csv')
+aga_pred_phone_tst_df['phone'] = bl_tst_df['phone'].values
+aga_pred_phone_tst_df['heightAboveWgs84EllipsoidM'] = bl_tst_df['heightAboveWgs84EllipsoidM'].values
+aga_pred_phone_tst_df
+# %%
 # collectionNameとphoneNameの総組み合わせ
 cn2pn_df = bl_trn_df[['collectionName', 'phoneName']].drop_duplicates()
 cn2pn_df
@@ -450,7 +462,10 @@ for tgt_cn in tqdm(collection_names):
     # print(tgt_cn, pns)
     for tgt_pn in pns:
         print('Prepare Training Dataset：', tgt_cn + '_' + tgt_pn)  
-        df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, bl_trn_df)
+        # df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, bl_trn_df)
+        df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, aga_pred_phone_trn_df)
+        # display(df_all_train)
+
         lat_lng_df_train, df_all_train = get_xyz(df_all_train, 'train')
         df_train = prepare_df_train(df_all_train,  window_size) # 所有轴的数据
 
@@ -489,15 +504,14 @@ x_df_train
 
 # %%
 # 保存
-x_df_train.to_csv('../../data/processed/train/imu_x.csv')
-y_df_train.to_csv('../../data/processed/train/imu_y.csv')
-z_df_train.to_csv('../../data/processed/train/imu_z.csv')
+x_df_train.to_csv('../../data/processed/train/imu_x_aga_pred_phone.csv', index=False)
+y_df_train.to_csv('../../data/processed/train/imu_y_aga_pred_phone.csv', index=False)
+z_df_train.to_csv('../../data/processed/train/imu_z_aga_pred_phone.csv', index=False)
 
 # %%
 # collectionNameとphoneNameの総組み合わせ
 cn2pn_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 cn2pn_df
-
 
 # %%
 collection_names =  [
@@ -525,7 +539,7 @@ for tgt_cn in tqdm(collection_names):
     pns = cn2pn_df.loc[cn2pn_df['collectionName'] == tgt_cn, 'phoneName'].values
     for tgt_pn in pns:
         print('Prepare Testing Dataset：', tgt_cn + '_' + tgt_pn)  
-        df_all_test = prepare_imu_data('test', tgt_cn, tgt_pn, bl_tst_df)
+        df_all_test = prepare_imu_data('test', tgt_cn, tgt_pn, aga_pred_phone_tst_df)
         lat_lng_df_test, df_all_test = get_xyz(df_all_test, 'test')
         df_test = prepare_df_test(df_all_test,  window_size) # 所有轴的数据
 
@@ -563,6 +577,7 @@ print(z_df_test.isnull().sum())
 x_df_test
 # %%
 # 保存
-x_df_test.to_csv('../../data/processed/test/imu_x.csv')
-y_df_test.to_csv('../../data/processed/test/imu_y.csv')
-z_df_test.to_csv('../../data/processed/test/imu_z.csv')
+x_df_test.to_csv('../../data/processed/test/imu_x_aga_pred_phone.csv', index=False)
+y_df_test.to_csv('../../data/processed/test/imu_y_aga_pred_phone.csv', index=False)
+z_df_test.to_csv('../../data/processed/test/imu_z_aga_pred_phone.csv', index=False)
+# %%
