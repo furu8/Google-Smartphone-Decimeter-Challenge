@@ -38,6 +38,9 @@ display(test_dr_df.shape)
 display(test_gnss_df.shape)
 
 ############################################################################################################
+
+# %%
+train_gnss_df.describe()
 # %%[markdown]
 # # Train
 # ## derived
@@ -77,7 +80,7 @@ train_gnss_df.loc[train_gnss_df['CodeType']=='Q', 'CodeType'] = 2
 train_gnss_df[['CodeType']]
 
 # %%
-train_gnss_df['HasEphemerisData'].unique()
+train_gnss_df['ElevationDegrees'].unique()
 
 # %%
 # groupy by for gnss
