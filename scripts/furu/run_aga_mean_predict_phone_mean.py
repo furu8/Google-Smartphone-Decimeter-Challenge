@@ -173,7 +173,7 @@ def visualize_trafic(df, center, zoom=9):
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     fig.update_layout(title_text="GPS trafic")
     fig.show()
-# %%
+    
 def visualize_collection(df, collections):
     target_df = df[df['collectionName'].isin(collections)].copy()
     lat_center = target_df['latDeg'].mean()
