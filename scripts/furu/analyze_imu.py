@@ -1,4 +1,5 @@
 # %%
+from IPython.core.display import display
 import numpy as np
 from cv2 import Rodrigues
 import pandas as pd
@@ -11,7 +12,8 @@ import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import KFold, TimeSeriesSplit
 from sklearn.metrics import accuracy_score
-import lightgbm as lgb
+import re
+import glob as gb
 from tqdm import tqdm
 
 from scipy.ndimage import gaussian_filter1d
@@ -19,9 +21,9 @@ import warnings
 warnings.filterwarnings("ignore", category=Warning)
 
 # 最大表示行数を設定
-pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_rows', 1000)
 # 最大表示列数の指定
-pd.set_option('display.max_columns', 500)
+pd.set_option('display.max_columns', 1000)
 
 
 # %%
@@ -223,18 +225,62 @@ def ECEF_to_WGS84(x,y,z):
 
 def get_xyz(df_all, dataset_name):
     # baseline: lat/lngDeg -> x/y/z
-    df_all['Xbl'], df_all['Ybl'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x.latDeg_bl, x.lngDeg_bl, x.heightAboveWgs84EllipsoidM), axis=1))
+    df_all['Xbl'], df_all['Ybl'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_bl'], x['lngDeg_bl'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xaga_mean_predict_phone_mean'], df_all['Yaga_mean_predict_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_mean_predict_phone_mean'], x['lngDeg_aga_mean_predict_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xaga_phone_mean_mean_predict'], df_all['Yaga_phone_mean_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_phone_mean_mean_predict'], x['lngDeg_aga_phone_mean_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xaga_phone_mean'], df_all['Yaga_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_phone_mean'], x['lngDeg_aga_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xaga_mean_predict'], df_all['Yaga_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_mean_predict'], x['lngDeg_aga_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xkalman_mean_predict_phone_mean'], df_all['Ykalman_mean_predict_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_mean_predict_phone_mean'], x['lngDeg_kalman_mean_predict_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xkalman_mean_predict'], df_all['Ykalman_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_mean_predict'], x['lngDeg_kalman_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xkalman_phone_mean_mean_predict'], df_all['Ykalman_phone_mean_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_phone_mean_mean_predict'], x['lngDeg_kalman_phone_mean_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    df_all['Xkalman_phone_mean'], df_all['Ykalman_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_phone_mean'], x['lngDeg_kalman_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
     
     if dataset_name == 'train':
         # gt: lat/lngDeg -> x/y/z
-        df_all['Xgt'], df_all['Ygt'], df_all['Zgt'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x.latDeg_gt, x.lngDeg_gt, x.heightAboveWgs84EllipsoidM), axis=1))
+        df_all['Xgt'], df_all['Ygt'], df_all['Zgt'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_gt'], x['lngDeg_gt'], x['heightAboveWgs84EllipsoidM']), axis=1))
         # copy lat/lngDeg
-        lat_lng_df = df_all[['latDeg_gt','lngDeg_gt', 'latDeg_bl', 'lngDeg_bl']]
-        df_all.drop(['latDeg_gt','lngDeg_gt', 'latDeg_bl', 'lngDeg_bl'], axis = 1, inplace = True)
+        lat_lng_df = df_all[['latDeg_gt','lngDeg_gt', 'latDeg_bl', 'lngDeg_bl', 
+            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+        ]]
+        df_all.drop(['latDeg_gt','lngDeg_gt', 'latDeg_bl', 'lngDeg_bl',
+            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+        ], axis = 1, inplace = True)
     elif dataset_name == 'test':
         # copy lat/lngDeg
-        lat_lng_df = df_all[['latDeg_bl', 'lngDeg_bl']]
-        df_all.drop(['latDeg_bl', 'lngDeg_bl', 'latDeg','lngDeg',], axis = 1, inplace = True)     
+        lat_lng_df = df_all[['latDeg_bl', 'lngDeg_bl',
+            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+        ]]
+        df_all.drop(['latDeg_bl', 'lngDeg_bl', 'latDeg','lngDeg',
+            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+        ], axis = 1, inplace = True)     
         
     return lat_lng_df, df_all
 
@@ -310,7 +356,16 @@ def remove_other_axis_feats(df_all, tgt_axis):
                      'GyroXRadPerSec', 'GyroZRadPerSec', 'GyroYRadPerSec',
                      'MagXMicroT', 'MagYMicroT', 'MagZMicroT',
                      'yawZDeg', 'rollYDeg', 'pitchXDeg',
-                     'Xbl', 'Ybl', 'Zbl']
+                     'Xbl', 'Ybl', 'Zbl',
+                    'Xaga_mean_predict_phone_mean', 'Xaga_mean_predict_phone_mean',
+                    'Xaga_phone_mean_mean_predict', 'Xaga_phone_mean_mean_predict',
+                    'Xaga_mean_predict', 'Xaga_mean_predict',
+                    'Xaga_phone_mean', 'Xaga_phone_mean',
+                    'Xkalman_mean_predict_phone_mean', 'Xkalman_mean_predict_phone_mean',
+                    'Xkalman_phone_mean_mean_predict', 'Xkalman_phone_mean_mean_predict',
+                    'Xkalman_mean_predict', 'Xkalman_mean_predict',
+                    'Xkalman_phone_mean', 'Xkalman_phone_mean',
+                    ]
     tgt_imu_feats = []
     for axis in ['X', 'Y', 'Z']:
         if axis != tgt_axis:
@@ -422,16 +477,41 @@ print('Baseline Test shape:', bl_tst_df.shape)
 print('Test shape:', sample_df.shape)
 
 # %%
-aga_pred_phone_trn_df = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean_train.csv')
-aga_pred_phone_trn_df['phone'] = bl_trn_df['phone'].values
-aga_pred_phone_trn_df['heightAboveWgs84EllipsoidM'] = bl_trn_df['heightAboveWgs84EllipsoidM'].values
-aga_pred_phone_trn_df
+train_pahts = gb.glob('../../data/interim/*_train.csv')
+
+latlng_dict = {}
+for train_path in train_pahts:
+    key = re.split('/|_train', train_path)[4]
+    print(key)
+    latlng_dict[key] = pd.read_csv(train_path)
 
 # %%
-aga_pred_phone_tst_df = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean.csv')
-aga_pred_phone_tst_df['phone'] = bl_tst_df['phone'].values
-aga_pred_phone_tst_df['heightAboveWgs84EllipsoidM'] = bl_tst_df['heightAboveWgs84EllipsoidM'].values
-aga_pred_phone_tst_df
+# rename
+for key in latlng_dict.keys():
+    print(key)
+    latlng_dict[key] = latlng_dict[key].rename(columns={'latDeg':f'latDeg_{key}', 'lngDeg':f'lngDeg_{key}'})
+    # display(latlng_dict[key])
+
+# %%
+# merge
+for key, value in latlng_dict.items():
+    print(key)
+    # display(value)
+    bl_trn_df = pd.merge_asof(
+                    bl_trn_df.sort_values('millisSinceGpsEpoch'),
+                    value[[f'latDeg_{key}', f'lngDeg_{key}', 'millisSinceGpsEpoch', 'collectionName', 'phoneName']].sort_values('millisSinceGpsEpoch'),
+                    on='millisSinceGpsEpoch',
+                    by=['collectionName', 'phoneName'],
+                    direction='nearest'
+    )
+bl_trn_df
+
+# %%
+bl_trn_df.to_csv('../../data/interim/train/predicted_many_lat_lng_deg.csv', index=False)
+
+# %%
+bl_trn_df = pd.read_csv('../../data/interim/train/predicted_many_lat_lng_deg.csv')
+bl_trn_df
 # %%
 # collectionNameとphoneNameの総組み合わせ
 cn2pn_df = bl_trn_df[['collectionName', 'phoneName']].drop_duplicates()
@@ -441,6 +521,7 @@ cn2pn_df
 # 特徴量作成
 collection_names =  [
     '2021-04-22-US-SJC-1',
+    '2021-04-26-US-SVL-1',
     '2021-04-28-US-SJC-1',
     '2021-04-29-US-SJC-2',
     '2021-04-15-US-MTV-1',
@@ -462,17 +543,18 @@ for tgt_cn in tqdm(collection_names):
     # print(tgt_cn, pns)
     for tgt_pn in pns:
         print('Prepare Training Dataset：', tgt_cn + '_' + tgt_pn)  
-        # df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, bl_trn_df)
-        df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, aga_pred_phone_trn_df)
+        df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, bl_trn_df)
+        # df_all_train = prepare_imu_data('train', tgt_cn, tgt_pn, aga_pred_phone_trn_df)
         # display(df_all_train)
-
+        df_all_train = df_all_train.drop_duplicates(subset='millisSinceGpsEpoch').reset_index(drop=True)
         lat_lng_df_train, df_all_train = get_xyz(df_all_train, 'train')
         df_train = prepare_df_train(df_all_train,  window_size) # 所有轴的数据
+        print(len(bl_trn_df[(bl_trn_df['collectionName']==tgt_cn) & (bl_trn_df['phoneName']==tgt_pn)]), len(df_all_train), len(df_train))
 
         for axis in ['X', 'Y', 'Z']:
             axis_df = remove_other_axis_feats(df_train, axis)
             axis_df = add_stat_feats(axis_df, axis)
-            axis_dict[axis] = axis_df
+            axis_dict[axis] = axis_df.copy()
             axis_dict[axis]['collectionName'] = tgt_cn
             axis_dict[axis]['phoneName'] = tgt_pn
 
@@ -487,6 +569,12 @@ x_df_train = pd.concat(x_df_trains, axis = 0)
 y_df_train = pd.concat(y_df_trains, axis = 0)
 z_df_train = pd.concat(z_df_trains, axis = 0)
 lat_lng_df_train = pd.concat(lat_lng_df_trains, axis = 0)
+
+# %%
+x_df_train = x_df_train.reset_index(drop=True)
+y_df_train = y_df_train.reset_index(drop=True)
+z_df_train = z_df_train.reset_index(drop=True)
+lat_lng_df_train = lat_lng_df_train.reset_index(drop=True)
 
 print('X; Final Dataset shape：', x_df_train.shape)
 print('Y; Final Dataset shape：', y_df_train.shape)
@@ -504,18 +592,111 @@ x_df_train
 
 # %%
 # 保存
-x_df_train.to_csv('../../data/processed/train/imu_x_aga_pred_phone.csv', index=False)
-y_df_train.to_csv('../../data/processed/train/imu_y_aga_pred_phone.csv', index=False)
-z_df_train.to_csv('../../data/processed/train/imu_z_aga_pred_phone.csv', index=False)
+x_df_train.to_csv('../../data/processed/train/imu_x_many_lat_lng_deg.csv', index=False)
+y_df_train.to_csv('../../data/processed/train/imu_y_many_lat_lng_deg.csv', index=False)
+z_df_train.to_csv('../../data/processed/train/imu_z_many_lat_lng_deg.csv', index=False)
 
+# %%
+for col in x_df_train.columns:
+    j = x_df_train[x_df_train[col].isnull()==True]
+    idx = x_df_train[x_df_train[col].isnull()==True].index
+    if not j.empty:
+        print(col)
+        fillcol = col.split('_')[0] + '_29'
+        print(fillcol)
+        display(j)
+        display(j[[col]])
+        display(j[[fillcol]])
+        display(x_df_train.loc[idx, [col, fillcol]])
+        display(x_df_train.loc[idx+1, [col, fillcol]])
+        display(x_df_train.loc[idx+2, [col, fillcol]])
+
+        # x_df_train.loc[idx, col] = x_df_train.loc[idx+1, fillcol].values
+        # display(x_df_train.loc[idx, [col, fillcol]])
+
+# %%
+for col in y_df_train.columns:
+    j = y_df_train[y_df_train[col].isnull()==True]
+    idx = y_df_train[y_df_train[col].isnull()==True].index
+    if not j.empty:
+        print(col)
+        display(j)
+        fillcol = col.split('_')[0] + '_29'
+        print(fillcol)
+        display(j)
+        display(j[[col]])
+        display(j[[fillcol]])
+        display(y_df_train.loc[idx, [col, fillcol]])
+        display(y_df_train.loc[idx+1, [col, fillcol]])
+        display(y_df_train.loc[idx+2, [col, fillcol]])
+
+        # y_df_train.loc[idx, col] = y_df_train.loc[idx+1, fillcol].values
+        # display(y_df_train.loc[idx, [col, fillcol]])
+
+# %%
+for col in z_df_train.columns:
+    j = z_df_train[z_df_train[col].isnull()==True]
+    idx = z_df_train[z_df_train[col].isnull()==True].index
+    if not j.empty:
+        print(col)
+        display(j)
+        fillcol = col.split('_')[0] + '_29'
+        print(fillcol)
+        display(j)
+        display(j[[col]])
+        display(j[[fillcol]])
+        display(z_df_train.loc[idx, [col, fillcol]])
+        display(z_df_train.loc[idx+1, [col, fillcol]])
+        display(z_df_train.loc[idx+2, [col, fillcol]])
+
+        # z_df_train.loc[idx, col] = z_df_train.loc[idx+1, fillcol].values
+        # display(z_df_train.loc[idx, [col, fillcol]])
+
+
+# %%
+test_pahts = gb.glob('../../data/interim/*_test.csv')
+
+latlng_dict = {}
+for test_path in test_pahts:
+    key = re.split('/|_test', test_path)[4]
+    print(key)
+    latlng_dict[key] = pd.read_csv(test_path)
+
+# %%
+# rename
+for key in latlng_dict.keys():
+    print(key)
+    latlng_dict[key] = latlng_dict[key].rename(columns={'latDeg':f'latDeg_{key}', 'lngDeg':f'lngDeg_{key}'})
+    # display(latlng_dict[key])
+
+# %%
+# merge
+for key, value in latlng_dict.items():
+    print(key)
+    # display(value)
+    bl_tst_df = pd.merge_asof(
+                    bl_tst_df.sort_values('millisSinceGpsEpoch'),
+                    value[[f'latDeg_{key}', f'lngDeg_{key}', 'millisSinceGpsEpoch', 'collectionName', 'phoneName']].sort_values('millisSinceGpsEpoch'),
+                    on='millisSinceGpsEpoch',
+                    by=['collectionName', 'phoneName'],
+                    direction='nearest'
+    )
+bl_tst_df
+
+# %%
+bl_tst_df.to_csv('../../data/interim/test/predicted_many_lat_lng_deg.csv', index=False)
+
+# %%
+bl_tst_df = pd.read_csv('../../data/interim/test/predicted_many_lat_lng_deg.csv')
+bl_tst_df
 # %%
 # collectionNameとphoneNameの総組み合わせ
 cn2pn_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 cn2pn_df
 
 # %%
-collection_names =  [
-    '2021-04-02-US-SJC-2',
+collection_names = [
+    '2021-04-02-US-SJC-1',
     '2021-04-22-US-SJC-2',
     '2021-04-29-US-SJC-3',
     '2021-03-16-US-MTV-2',
@@ -524,6 +705,8 @@ collection_names =  [
     '2021-04-28-US-MTV-2',
     '2021-04-29-US-MTV-2',
     '2021-04-26-US-SVL-2',
+    '2021-03-16-US-RWC-2',
+    '2021-03-25-US-PAO-1'
 ]
 """3月以降他
 '2021-03-16-US-RWC-2'
@@ -538,18 +721,22 @@ lat_lng_df_tests = []
 for tgt_cn in tqdm(collection_names):
     pns = cn2pn_df.loc[cn2pn_df['collectionName'] == tgt_cn, 'phoneName'].values
     for tgt_pn in pns:
-        print('Prepare Testing Dataset：', tgt_cn + '_' + tgt_pn)  
-        df_all_test = prepare_imu_data('test', tgt_cn, tgt_pn, aga_pred_phone_tst_df)
+        print('\nPrepare Testing Dataset：', tgt_cn + '_' + tgt_pn)  
+        df_all_test = prepare_imu_data('test', tgt_cn, tgt_pn, bl_tst_df)
         lat_lng_df_test, df_all_test = get_xyz(df_all_test, 'test')
+        df_all_test = df_all_test.drop_duplicates(subset='millisSinceGpsEpoch').reset_index(drop=True)
         df_test = prepare_df_test(df_all_test,  window_size) # 所有轴的数据
+        print(len(bl_tst_df[(bl_tst_df['collectionName']==tgt_cn) & (bl_tst_df['phoneName']==tgt_pn)]), len(df_all_test), len(df_test))
+        # display(bl_tst_df.loc[(bl_tst_df['collectionName']==tgt_cn) & (bl_tst_df['phoneName']==tgt_pn), ['millisSinceGpsEpoch']])
+        # display(df_all_test[['millisSinceGpsEpoch']])
+        # display(df_test[['millisSinceGpsEpoch']])
 
         for axis in ['X', 'Y', 'Z']:
             axis_df = remove_other_axis_feats(df_test, axis)
             axis_df = add_stat_feats(axis_df, axis)
-            axis_dict[axis] = axis_df
+            axis_dict[axis] = axis_df.copy()
             axis_dict[axis]['collectionName'] = tgt_cn
             axis_dict[axis]['phoneName'] = tgt_pn
-
 
         x_df_tests.append(axis_dict['X'])
         y_df_tests.append(axis_dict['Y'])
@@ -561,6 +748,12 @@ x_df_test = pd.concat(x_df_tests, axis = 0)
 y_df_test = pd.concat(y_df_tests, axis = 0)
 z_df_test = pd.concat(z_df_tests, axis = 0)
 lat_lng_df_test = pd.concat(lat_lng_df_tests, axis = 0)
+
+# %%
+x_df_test = x_df_test.reset_index(drop=True)
+y_df_test = y_df_test.reset_index(drop=True)
+z_df_test = z_df_test.reset_index(drop=True)
+lat_lng_df_test = lat_lng_df_test.reset_index(drop=True)
 
 print('X; Final Dataset shape：', x_df_test.shape)
 print('Y; Final Dataset shape：', y_df_test.shape)
@@ -577,7 +770,79 @@ print(z_df_test.isnull().sum())
 x_df_test
 # %%
 # 保存
-x_df_test.to_csv('../../data/processed/test/imu_x_aga_pred_phone.csv', index=False)
-y_df_test.to_csv('../../data/processed/test/imu_y_aga_pred_phone.csv', index=False)
-z_df_test.to_csv('../../data/processed/test/imu_z_aga_pred_phone.csv', index=False)
+x_df_test.to_csv('../../data/processed/test/imu_x_many_lat_lng_deg.csv', index=False)
+y_df_test.to_csv('../../data/processed/test/imu_y_many_lat_lng_deg.csv', index=False)
+z_df_test.to_csv('../../data/processed/test/imu_z_many_lat_lng_deg.csv', index=False)
+
+# %%
+for col in x_df_test.columns:
+    j = x_df_test[x_df_test[col].isnull()==True]
+    idx = x_df_test[x_df_test[col].isnull()==True].index
+    if not j.empty:
+        print(col)
+        fillcol = col.split('_')[0] + '_29'
+        print(fillcol)
+        display(j)
+        display(j[[col]])
+        display(j[[fillcol]])
+        display(x_df_test.loc[idx, [col, fillcol]])
+        display(x_df_test.loc[idx+1, [col, fillcol]])
+        display(x_df_test.loc[idx+2, [col, fillcol]])
+
+        x_df_test.loc[idx, col] = x_df_test.loc[idx+1, fillcol].values
+        display(x_df_test.loc[idx, [col, fillcol]])
+
+# %%
+for col in y_df_test.columns:
+    j = y_df_test[y_df_test[col].isnull()==True]
+    idx = y_df_test[y_df_test[col].isnull()==True].index
+    if not j.empty:
+        print(col)
+        display(j)
+        fillcol = col.split('_')[0] + '_29'
+        print(fillcol)
+        display(j)
+        display(j[[col]])
+        display(j[[fillcol]])
+        display(y_df_test.loc[idx, [col, fillcol]])
+        display(y_df_test.loc[idx+1, [col, fillcol]])
+        display(y_df_test.loc[idx+2, [col, fillcol]])
+
+        y_df_test.loc[idx, col] = y_df_test.loc[idx+1, fillcol].values
+        display(y_df_test.loc[idx, [col, fillcol]])
+
+# %%
+for col in z_df_test.columns:
+    j = z_df_test[z_df_test[col].isnull()==True]
+    idx = z_df_test[z_df_test[col].isnull()==True].index
+    if not j.empty:
+        print(col)
+        display(j)
+        fillcol = col.split('_')[0] + '_29'
+        print(fillcol)
+        display(j)
+        display(j[[col]])
+        display(j[[fillcol]])
+        display(z_df_test.loc[idx, [col, fillcol]])
+        display(z_df_test.loc[idx+1, [col, fillcol]])
+        display(z_df_test.loc[idx+2, [col, fillcol]])
+
+        z_df_test.loc[idx, col] = z_df_test.loc[idx+1, fillcol].values
+        display(z_df_test.loc[idx, [col, fillcol]])
+# %%
+x_df_test = x_df_test.reset_index(drop=True)
+
+# %%
+x_df_test[x_df_test['GyroXRadPerSec_30'].isnull()==True]
+
+# %%
+x_df_test['GyroXRadPerSec_30']
+
+# %%
+print(x_df_test['GyroXRadPerSec_30'].mean())
+print((x_df_test.loc[27502, 'GyroXRadPerSec_30'] + x_df_test.loc[27504, 'GyroXRadPerSec_30']) / 2)
+0.006540	
+
+# %%
+x_df_test[(x_df_test['collectionName']=='2021-04-08-US-MTV-1') & (x_df_test['phoneName']=='Pixel5')].reset_index(drop=True)
 # %%
