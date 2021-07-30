@@ -40,13 +40,13 @@ def load_dfs(drived_id):
 def extract_SJC(train_df, test_df):
     # extract
     train_df = train_df[
-                    (train_df['collectionName']=='2021-04-22-US-SJC-1')
+                    (train_df['collectionName']=='2021-04-22-US-SJC-1') 
                     | (train_df['collectionName']=='2021-04-28-US-SJC-1')
                     | (train_df['collectionName']=='2021-04-29-US-SJC-2')
                 ]
     test_df = test_df[
-                    (test_df['collectionName']=='2021-04-02-US-SJC-1')
-                    | (test_df['collectionName']=='2021-04-22-US-SJC-2')
+                    # (test_df['collectionName']=='2021-04-02-US-SJC-1') # これだけ場所が違う
+                    (test_df['collectionName']=='2021-04-22-US-SJC-2')
                     | (test_df['collectionName']=='2021-04-29-US-SJC-3')
                 ]
 
@@ -59,14 +59,14 @@ def extract_SJC(train_df, test_df):
 def extract_MTV(train_df, test_df):
     # extract
     train_df = train_df[
-                    (train_df['collectionName']=='2021-04-15-US-MTV-1')
-                    | (train_df['collectionName']=='2021-04-28-US-MTV-1')
+                    # (train_df['collectionName']=='2021-04-15-US-MTV-1')
+                    (train_df['collectionName']=='2021-04-28-US-MTV-1')
                     | (train_df['collectionName']=='2021-04-29-US-MTV-1')
                 ]
     test_df = test_df[
-                    (test_df['collectionName']=='2021-03-16-US-MTV-2')
-                    | (test_df['collectionName']=='2021-04-08-US-MTV-1')
-                    | (test_df['collectionName']=='2021-04-21-US-MTV-1')
+                    # (test_df['collectionName']=='2021-03-16-US-MTV-2')
+                    # | (test_df['collectionName']=='2021-04-08-US-MTV-1')
+                    (test_df['collectionName']=='2021-04-21-US-MTV-1')
                     | (test_df['collectionName']=='2021-04-28-US-MTV-2')
                     | (test_df['collectionName']=='2021-04-29-US-MTV-2')
                 ]
@@ -195,13 +195,13 @@ def main():
     window_size = 30
     cns_dict = {
         'SJC': [
-                '2021-04-02-US-SJC-1', 
+                # '2021-04-02-US-SJC-1', # 場所が違う
                 '2021-04-22-US-SJC-2', 
                 '2021-04-29-US-SJC-3'
             ],
         # 'MTV': [
-        #         '2021-03-16-US-MTV-2',
-        #         '2021-04-08-US-MTV-1', 
+        #         # '2021-03-16-US-MTV-2',
+        #         # '2021-04-08-US-MTV-1', 
         #         '2021-04-21-US-MTV-1', 
         #         '2021-04-28-US-MTV-2', 
         #         '2021-04-29-US-MTV-2'
@@ -269,9 +269,9 @@ def main():
                                 })
 
         # feature importanceを表示
-        print_importances(models_x, df_test_x.columns)
-        print_importances(models_y, df_test_y.columns)
-        print_importances(models_z, df_test_z.columns)
+        # print_importances(models_x, df_test_x.columns)
+        # print_importances(models_y, df_test_y.columns)
+        # print_importances(models_z, df_test_z.columns)
 
         # xyz -> lng, lat
         lng_gt, lat_gt, _ = ECEF_to_WGS84(val_compare_df['Xgt'].values,val_compare_df['Ygt'].values,val_compare_df['Zgt'].values)
@@ -283,10 +283,10 @@ def main():
         val_compare_df['latDeg_pred'] = lat_pred
         val_compare_df['lngDeg_pred'] = lng_pred
         test_pred_df = pd.DataFrame({'latDeg':lat_test_pred, 'lngDeg':lng_test_pred})
-        
+        display(test_pred_df)
         # 予測値にcollectionNameとphoneNameを結合
         test_pred_df = pd.concat([test_pred_df, x_test_df[['collectionName', 'phoneName']]], axis=1)
-        
+        display(test_pred_df)
         # plot
         # val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
         # plt.show()
@@ -388,9 +388,56 @@ visualize_collection(bl_tst_df[bl_tst_df['collectionName'].isin(['2021-03-16-US-
                                             '2021-04-21-US-MTV-1', 
                                             '2021-04-28-US-MTV-2', 
                                             '2021-04-29-US-MTV-2'])])
+
 # %%
+# bl test sjc
+visualize_collection(bl[bl['collectionName'].isin([
+                                                # '2021-04-02-US-SJC-1',
+                                                '2021-04-22-US-SJC-2',
+                                                '2021-04-29-US-SJC-3',])])
+
+
+# %%
+# bl test mtv
+visualize_collection(bl[bl['collectionName'].isin([
+                                            # '2021-03-16-US-MTV-2', # 左の長い 
+                                            # '2021-04-08-US-MTV-1', # 上のリボン
+                                            '2021-04-21-US-MTV-1', 
+                                            '2021-04-28-US-MTV-2', 
+                                            '2021-04-29-US-MTV-2'
+                                            ])])
+
+# %%
+# bl train sjc
+bltr = pd.read_csv('../../data/raw/baseline_locations_train.csv')
+visualize_collection(bltr[bltr['collectionName'].isin([
+                                            '2021-04-22-US-SJC-1',
+                                            '2021-04-28-US-SJC-1',
+                                            '2021-04-29-US-SJC-2',
+                                            ])]) 
+
+# %%
+# bl train mtv
+visualize_collection(bltr[bltr['collectionName'].isin([
+                                            # '2021-04-15-US-MTV-1', # 上側の複雑
+                                            '2021-04-28-US-MTV-1',
+                                            '2021-04-29-US-MTV-1',
+                                            ])])                                            
+# %%
+# train
+'2021-04-22-US-SJC-1',
+'2021-04-28-US-SJC-1',
+'2021-04-29-US-SJC-2',
+'2021-04-15-US-MTV-1',
+'2021-04-28-US-MTV-1',
+'2021-04-29-US-MTV-1',
+
+# test
 '2021-03-16-US-MTV-2', 
-                '2021-04-08-US-MTV-1', 
-                '2021-04-21-US-MTV-1', 
-                '2021-04-28-US-MTV-2', 
-                '2021-04-29-US-MTV-2'
+'2021-04-08-US-MTV-1', 
+'2021-04-21-US-MTV-1', 
+'2021-04-28-US-MTV-2', 
+'2021-04-29-US-MTV-2'
+'2021-04-02-US-SJC-1',
+'2021-04-22-US-SJC-2',
+'2021-04-29-US-SJC-3',
