@@ -47,6 +47,8 @@ def gnss_log_to_dataframes(path):
             except ValueError:
                 results[k] = results[k][:-1]
                 results[k][col] = pd.to_numeric(results[k][col])
+        results[k]["collectionName"] = path.split('\\')[1].replace('TMTV', 'MTV') if 'TMTV' in path.split('\\')[1] else path.split('\\')[1]
+        results[k]["phoneName"] = path.split('\\')[2]
     #results["Raw"]["rawPrM"] = results["Raw"]["TimeNanos"] - results["Raw"]["FullBiasNanos"] - results["Raw"]["BiasNanos"]
 
     return results
@@ -304,12 +306,11 @@ dfs = {k: {l: [] for l in gnss_section_names} for k in phone_list}
 #gt = pd.DataFrame()
 #derived_data = pd.DataFrame()
 import os
-for path in ['train', 'test']:
+for path in ['test']:
     for root, dirs, files in os.walk(base_path + path):
         #csvs = filter(lambda f: f.endswith(".csv"), files)
         txts = filter(lambda f: f.endswith(".txt"), files)
         for txt in txts:
-            #print(txt)
             #if phone not in root:
             #    continue
             #else:
@@ -329,7 +330,7 @@ for path in ['train', 'test']:
     #display(dfs['Mi8'])
     for key in dfs.keys():
         for sub_key in dfs[key].keys():
-            dfs[key][sub_key].to_csv(f'../../data/interim/{path}/merged_{key}_{sub_key}.csv', sep=',', index=False)
+            dfs[key][sub_key].to_csv(f'../../data/interim/{path}/merged_{key}_{sub_key}_add_columns.csv', sep=',', index=False)
 #derived_data.rename(columns={"svid": "Svid", "constellationType": "ConstellationType"}, inplace=True)
 #gt.to_csv(f'../../data/interim/test/merged_{phone}_gt.csv', sep=',', index=False)
 #derived_data.to_csv(f'../../data/interim/test/merged_{phone}_derived.csv', sep=',', index=False)
