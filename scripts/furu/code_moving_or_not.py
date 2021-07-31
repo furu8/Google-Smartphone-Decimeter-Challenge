@@ -51,7 +51,7 @@ def add_IMU(df, dataset_name, cname, pname):
     gyr_df['millisSinceGpsEpoch'] = gyr_df['millisSinceGpsEpoch'].astype(np.int64)
     mag_df['millisSinceGpsEpoch'] = mag_df['millisSinceGpsEpoch'].astype(np.int64)
     # ort_df['millisSinceGpsEpoch'] = ort_df['millisSinceGpsEpoch'].astype(np.int64)
-    display(acc_df)
+    
     acc_df["x_f_acce"] = acc_df["UncalAccelZMps2"]
     acc_df["y_f_acce"] = acc_df["UncalAccelXMps2"]
     acc_df["z_f_acce"] = acc_df["UncalAccelYMps2"]
