@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import lightgbm as lgb
+import optuna.integration.lightgbm as lgb_o
 # from models import Runner, ModelLGB
 from sklearn.model_selection import KFold, TimeSeriesSplit
 import matplotlib.pyplot as plt
@@ -115,7 +116,7 @@ def train_cv(df_train, df_test, tgt_axis, params):
     feature_names = df_train.drop(['Xgt', 'Ygt', 'Zgt'], axis=1).columns # gt除外
     target = '{}gt'.format(tgt_axis)
 
-    kfold = KFold(n_splits=2, shuffle=True, random_state=params['seed'])
+    kfold = KFold(n_splits=3, shuffle=True, random_state=2021)
 
     pred_valid = np.zeros((len(df_train),)) 
     pred_test = np.zeros((len(df_test),)) 
@@ -126,21 +127,40 @@ def train_cv(df_train, df_test, tgt_axis, params):
         X_val = df_train.iloc[val_idx][feature_names]
         Y_val = df_train.iloc[val_idx][target]
 
-        model = lgb.LGBMRegressor(**params)
-        lgb_model = model.fit(X_train, 
-                              Y_train,
-                              eval_names=['train', 'valid'],
-                              eval_set=[(X_train, Y_train), (X_val, Y_val)],
-                              verbose=0,
-                              eval_metric=params['metric'],
-                              early_stopping_rounds=params['early_stopping_rounds']
-                    )
+        lgb_train = lgb.Dataset(X_train, Y_train)
+        lgb_valid = lgb.Dataset(X_val, Y_val)
 
+        # model = lgb.LGBMRegressor(**params)
+        # lgb_model = model.fit(X_train, 
+        #                       Y_train,
+        #                       eval_names=['train', 'valid'],
+        #                       eval_set=[(X_train, Y_train), (X_val, Y_val)],
+        #                       verbose=0,
+        #                       eval_metric=params['metric'],
+        #                       early_stopping_rounds=params['early_stopping_rounds']
+        #             )
+
+        # パラメータ探索
+        # best_params, tuning_history = dict(), list()
+        lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
+                            verbose_eval=0,
+                            # best_params=best_params,
+                            # tuning_history=tuning_history
+                    )
+        best_params = lgb_o.params
+        print('Best Params:', best_params)
+        # print('Tuning history:', tuning_history)
+
+        # 学習
+        lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
+
+        # 予測
         pred_valid[val_idx] = lgb_model.predict(X_val, num_iteration = lgb_model.best_iteration_)
         pred_test += lgb_model.predict(df_test[feature_names], num_iteration = lgb_model.best_iteration_)
 
         scores.append(lgb_model.best_score_['valid']['l2'])
-        models.append(model)
+        # models.append(model)
+        models.append(lgb_model)
     
     pred_test = pred_test / kfold.n_splits
     
@@ -188,13 +208,13 @@ def main():
                 '2021-04-22-US-SJC-2', 
                 '2021-04-29-US-SJC-3'
             ],
-        'MTV': [
-                # '2021-03-16-US-MTV-2',
-                # '2021-04-08-US-MTV-1', 
-                '2021-04-21-US-MTV-1', 
-                '2021-04-28-US-MTV-2', 
-                '2021-04-29-US-MTV-2'
-            ],
+        # 'MTV': [
+        #         # '2021-03-16-US-MTV-2',
+        #         # '2021-04-08-US-MTV-1', 
+        #         '2021-04-21-US-MTV-1', 
+        #         '2021-04-28-US-MTV-2', 
+        #         '2021-04-29-US-MTV-2'
+        #     ],
         # 'SVL': ['2021-04-26-US-SVL-2'],
     }
     # '2021-03-25-US-PAO-1'
@@ -207,16 +227,22 @@ def main():
     # display(train_df)
     # print(test_df.columns)
 
+    # params = {
+    #     'metric':'mse',
+    #     'objective':'regression',
+    #     'seed':2021,
+    #     'boosting_type':'gbdt',
+    #     'early_stopping_rounds':10,
+    #     'subsample':0.7,
+    #     'feature_fraction':0.7,
+    #     'bagging_fraction': 0.7,
+    #     'reg_lambda': 10
+    # }
     params = {
-        'metric':'mse',
-        'objective':'regression',
-        'seed':2021,
-        'boosting_type':'gbdt',
-        'early_stopping_rounds':10,
-        'subsample':0.7,
-        'feature_fraction':0.7,
-        'bagging_fraction': 0.7,
-        'reg_lambda': 10
+        'objective': 'mean_squared_error',
+        'metric': 'mse',
+        "verbosity": -1,
+        "boosting_type": "gbdt",
     }
 
     x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
@@ -315,9 +341,9 @@ def main():
                 bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 4] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'lngDeg'].values
 
         # save
-        output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
-        display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
-        output.to_csv(f'../../data/submission/imu_many_lat_lng_deg.csv', index=False)
+        # output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
+        # display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
+        # output.to_csv(f'../../data/submission/imu_many_lat_lng_deg_lgbm.csv', index=False)
 
 """base SJC
 dist_50: 5.063121933291297
