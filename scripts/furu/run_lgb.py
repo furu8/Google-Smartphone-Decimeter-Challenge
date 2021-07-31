@@ -5,6 +5,7 @@ import lightgbm as lgb
 # from models import Runner, ModelLGB
 from sklearn.model_selection import KFold, TimeSeriesSplit
 import matplotlib.pyplot as plt
+import glob as gb
 import pyproj
 from IPython.core.display import display
 
@@ -14,7 +15,7 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 
 
-def load_dfs(drived_id):
+def load_dfs():
     x_train_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
     x_test_df = pd.read_csv(f'../../data/processed/test/imu_x_many_lat_lng_deg.csv')
     y_train_df = pd.read_csv(f'../../data/processed/train/imu_y_many_lat_lng_deg.csv')
@@ -22,18 +23,9 @@ def load_dfs(drived_id):
     z_train_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
     z_test_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
-    if drived_id == 'SJC':
-        x_train_df, x_test_df = extract_SJC(x_train_df, x_test_df)
-        y_train_df, y_test_df = extract_SJC(y_train_df, y_test_df)
-        z_train_df, z_test_df = extract_SJC(z_train_df, z_test_df)
-    elif drived_id == 'MTV':
-        x_train_df, x_test_df = extract_MTV(x_train_df, x_test_df)
-        y_train_df, y_test_df = extract_MTV(y_train_df, y_test_df)
-        z_train_df, z_test_df = extract_MTV(z_train_df, z_test_df)
-    elif drived_id == 'SVL':
-        x_train_df, x_test_df = extract_SVL(x_train_df, x_test_df)
-        y_train_df, y_test_df = extract_SVL(y_train_df, y_test_df)
-        z_train_df, z_test_df = extract_SVL(z_train_df, z_test_df)
+    x_train_df, x_test_df = extract_SJC(x_train_df, x_test_df)
+    y_train_df, y_test_df = extract_SJC(y_train_df, y_test_df)
+    z_train_df, z_test_df = extract_SJC(z_train_df, z_test_df)
 
     return x_train_df, x_test_df, y_train_df, y_test_df, z_train_df, z_test_df
 
@@ -77,7 +69,6 @@ def extract_MTV(train_df, test_df):
 
     return train_df.reset_index(drop=True), test_df.reset_index(drop=True)
 
-
 def extract_SVL(train_df, test_df):
     # extract
     train_df = train_df[
@@ -92,7 +83,6 @@ def extract_SVL(train_df, test_df):
     # test_df = test_df.drop(['collectionName', 'phoneName'], axis=1)
 
     return train_df.reset_index(drop=True), test_df.reset_index(drop=True)
-
 
 def evaluate_lat_lng_dist(df):
     """
@@ -125,7 +115,7 @@ def train_cv(df_train, df_test, tgt_axis, params):
     feature_names = df_train.drop(['Xgt', 'Ygt', 'Zgt'], axis=1).columns # gt除外
     target = '{}gt'.format(tgt_axis)
 
-    kfold = KFold(n_splits=3, shuffle=True, random_state=params['seed'])
+    kfold = KFold(n_splits=2, shuffle=True, random_state=params['seed'])
 
     pred_valid = np.zeros((len(df_train),)) 
     pred_test = np.zeros((len(df_test),)) 
@@ -192,7 +182,6 @@ def calc_haversine(lat1, lon1, lat2, lon2):
 # %%
 %%time
 def main():
-    window_size = 30
     cns_dict = {
         'SJC': [
                 # '2021-04-02-US-SJC-1', # 場所が違う
@@ -206,9 +195,17 @@ def main():
                 '2021-04-28-US-MTV-2', 
                 '2021-04-29-US-MTV-2'
             ],
-        'SVL': ['2021-04-26-US-SVL-2'],
+        # 'SVL': ['2021-04-26-US-SVL-2'],
     }
     # '2021-03-25-US-PAO-1'
+    window_size = 30
+    
+    bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv')
+    sub = pd.read_csv('../../data/submission/sample_submission.csv')
+    cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
+
+    # display(train_df)
+    # print(test_df.columns)
 
     params = {
         'metric':'mse',
@@ -222,15 +219,12 @@ def main():
         'reg_lambda': 10
     }
 
-    bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv')
-    cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
-
-    x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_aga_pred_phone.csv')
-    x_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_aga_pred_phone.csv')
-    y_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_aga_pred_phone.csv')
-    y_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_aga_pred_phone.csv')
-    z_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_aga_pred_phone.csv')
-    z_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_aga_pred_phone.csv')
+    x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
+    x_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_many_lat_lng_deg.csv')
+    y_trn_df = pd.read_csv(f'../../data/processed/train/imu_y_many_lat_lng_deg.csv')
+    y_tst_df = pd.read_csv(f'../../data/processed/test/imu_y_many_lat_lng_deg.csv')
+    z_trn_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
+    z_tst_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
     for drived_id in cns_dict.keys():
         print(drived_id)
@@ -246,9 +240,15 @@ def main():
             x_train_df, x_test_df = extract_SVL(x_trn_df, x_tst_df)
             y_train_df, y_test_df = extract_SVL(y_trn_df, y_tst_df)
             z_train_df, z_test_df = extract_SVL(z_trn_df, z_tst_df)
-        display(x_train_df.shape)
-        # display(x_test_df)
-
+        
+        # display(x_train_df)
+        # df1 = x_train_df
+        # x_train_df, x_test_df, y_train_df, y_test_df , z_train_df, z_test_df = load_dfs()
+        # display(x_train_df)
+        # df2 = x_train_df
+        
+        # print((df1==df2))
+        # print((df1==df2).all().all())
         # drop
         x_train_df_droped = x_train_df.drop(['collectionName', 'phoneName'], axis=1)
         x_test_df_droped = x_test_df.drop(['collectionName', 'phoneName'], axis=1)
@@ -256,8 +256,6 @@ def main():
         y_test_df_droped = y_test_df.drop(['collectionName', 'phoneName'], axis=1)
         z_train_df_droped = z_train_df.drop(['collectionName', 'phoneName'], axis=1)
         z_test_df_droped = z_test_df.drop(['collectionName', 'phoneName'], axis=1)
-
-        print(x_train_df_droped.shape)
 
         df_train_x, df_test_x, pred_valid_x, pred_test_x, models_x = train_cv(x_train_df_droped, x_test_df_droped, 'X', params)
         df_train_y, df_test_y, pred_valid_y, pred_test_y, models_y = train_cv(y_train_df_droped, y_test_df_droped, 'Y', params)
@@ -269,9 +267,9 @@ def main():
                                 })
 
         # feature importanceを表示
-        # print_importances(models_x, df_test_x.columns)
-        # print_importances(models_y, df_test_y.columns)
-        # print_importances(models_z, df_test_z.columns)
+        print_importances(models_x, df_test_x.columns)
+        print_importances(models_y, df_test_y.columns)
+        print_importances(models_z, df_test_z.columns)
 
         # xyz -> lng, lat
         lng_gt, lat_gt, _ = ECEF_to_WGS84(val_compare_df['Xgt'].values,val_compare_df['Ygt'].values,val_compare_df['Zgt'].values)
@@ -288,12 +286,12 @@ def main():
         test_pred_df = pd.concat([test_pred_df, x_test_df[['collectionName', 'phoneName']]], axis=1)
         display(test_pred_df)
         # plot
-        val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
-        plt.show()
-        val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
-        plt.show()
-        val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
-        plt.show()
+        # val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
+        # plt.show()
+        # val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
+        # plt.show()
+        # val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
+        # plt.show()
 
         # IMU Prediction vs. GT
         val_compare_df['dist'] = calc_haversine(val_compare_df['latDeg_gt'], val_compare_df['lngDeg_gt'], 
@@ -305,148 +303,82 @@ def main():
         print('avg_dist:', val_compare_df['dist'].mean())
 
         # subに代入
-        print(cns_dict[drived_id])
+        display(test_pred_df)
         for cn in cns_dict[drived_id]:
             pns = cn2pn_tst_df.loc[cn2pn_tst_df['collectionName'] == cn, 'phoneName'].values
             for pn in pns:
-                print(cn, pn)
-                print(test_pred_df['collectionName'].unique())
-                print(test_pred_df['phoneName'].unique())
                 print(len(bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3]))
                 print(len(test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg']))
+                # display(bl_tst_df[bl_tst_df['phone']==cn + '_' + pn])
+                # display(bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:])
                 bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg'].values
                 bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 4] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'lngDeg'].values
 
-    # save
-    # bl_tst_df = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']]
-    # bl_tst_df.to_csv(f'../../data/submission/imu_many_lat_lng_deg.csv', index=False)
+        # save
+        output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
+        display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
+        output.to_csv(f'../../data/submission/imu_many_lat_lng_deg.csv', index=False)
 
-
-
-"""imu_many_lat_lng_deg_4SJC
-dist_50: 4.994871467980026
-dist_95: 17.410167568075536
-avg_dist_50_95: 11.202519518027781
-avg_dist: 6.748650959462235
+"""base SJC
+dist_50: 5.063121933291297
+dist_95: 16.939074672339274
+avg_dist_50_95: 11.001098302815286
+avg_dist: 6.8454032904081785
 """
 
-"""imu_many_lat_lng_deg
-dist_50: 5.8130661278406
-dist_95: 27.36315219756584
-avg_dist_50_95: 16.58810916270322
-avg_dist: 9.004280045960275
+"""aga_pred_phone SJC
+dist_50: 4.066073487410872
+dist_95: 12.806105757602893
+avg_dist_50_95: 8.436089622506882
+avg_dist: 5.163081251311284
 """
 
+"""many_lat_lng_deg SJC
+dist_50: 3.784868917816648
+dist_95: 12.170828810956964
+avg_dist_50_95: 7.9778488643868055
+avg_dist: 4.880605441604913
+"""
 
+"""many_lat_lng_deg MTV
+dist_50: 2.7413501389685906
+dist_95: 8.927857828572174
+avg_dist_50_95: 5.834603983770382
+avg_dist: 3.4713387527741397
+"""
+
+"""many_lat_lng_deg SVL
+dist_50: 6.168575146610203
+dist_95: 29.6640315080313
+avg_dist_50_95: 17.91630332732075
+avg_dist: 9.837515945117834
+"""
 
 if __name__ == '__main__':
     main()
-# %%
-# 可視化関連
-def visualize_trafic(df, center, zoom=15):
-    fig = px.scatter_mapbox(df,
-                            
-                            # Here, plotly gets, (x,y) coordinates
-                            lat="latDeg",
-                            lon="lngDeg",
-                            
-                            #Here, plotly detects color of series
-                            color="phoneName",
-                            labels="phoneName",
-                            
-                            zoom=zoom,
-                            center=center,
-                            height=600,
-                            width=800)
-    fig.update_layout(mapbox_style='stamen-terrain')
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    fig.update_layout(title_text="GPS trafic")
-    fig.show()
-    
-def visualize_collection(df):
-    target_df = df
-    lat_center = target_df['latDeg'].mean()
-    lng_center = target_df['lngDeg'].mean()
-    center = {"lat":lat_center, "lon":lng_center}
-    
-    visualize_trafic(target_df, center)
-# %%
-cn = '2021-03-16-US-MTV-2',
-bl = pd.read_csv('../../data/raw/baseline_locations_test.csv')
-# plt.scatter(bl_tst_df.loc[bl['collectionName']==cn, 'lngDeg'], bl_tst_df.loc[bl['collectionName']==cn, 'latDeg'])
-# plt.scatter(bl.loc[bl['collectionName']==cn, 'lngDeg'], bl.loc[bl['collectionName']==cn, 'latDeg'], s=0.5)
-# visualize_collection(bl[bl['collectionName'].isin(['2021-03-16-US-MTV-2', 
-#                                             '2021-04-08-US-MTV-1', 
-#                                             '2021-04-21-US-MTV-1', 
-#                                             '2021-04-28-US-MTV-2', 
-#                                             '2021-04-29-US-MTV-2'])])
 
 # %%
-# bl_tst
-visualize_collection(bl_tst_df[bl_tst_df['collectionName'].isin(['2021-03-16-US-MTV-2', 
-                                            '2021-04-08-US-MTV-1', 
-                                            '2021-04-21-US-MTV-1', 
-                                            '2021-04-28-US-MTV-2', 
-                                            '2021-04-29-US-MTV-2'])])
+bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv').sort_values('millisSinceGpsEpoch')
+bl_tst_df
+# %%
+sub = pd.read_csv('../../data/submission/sample_submission.csv')
+sub
 
 # %%
-# bl test sjc
-visualize_collection(bl[bl['collectionName'].isin([
-                                                # '2021-04-02-US-SJC-1',
-                                                '2021-04-22-US-SJC-2',
-                                                '2021-04-29-US-SJC-3',])])
-
-
+pd.concat([sub, bl_tst_df], axis=1)
 # %%
-# bl test mtv
-visualize_collection(bl[bl['collectionName'].isin([
-                                            # '2021-03-16-US-MTV-2', # 左の長い 
-                                            # '2021-04-08-US-MTV-1', # 上のリボン
-                                            '2021-04-21-US-MTV-1', 
-                                            '2021-04-28-US-MTV-2', 
-                                            '2021-04-29-US-MTV-2'
-                                            ]))
+sub['dif'] = bl_tst_df['millisSinceGpsEpoch']==sub['millisSinceGpsEpoch']
+sub[sub['dif']==False]
+# %%
+sub[sub['millisSinceGpsEpoch'].diff()<0]
+# %%
+bl_tst_df[bl_tst_df['millisSinceGpsEpoch'].diff()<0]
+# %%
+sub.rename(columns={'millisSinceGpsEpoch':'millisSinceGpsEpoch_sub'})
 
 # %%
-# bl test svl
-visualize_collection(bl[bl['collectionName'].isin(['2021-04-26-US-SVL-2'])])
-# %%
-# bl train sjc
-bltr = pd.read_csv('../../data/raw/baseline_locations_train.csv')
-visualize_collection(bltr[bltr['collectionName'].isin([
-                                            '2021-04-22-US-SJC-1',
-                                            '2021-04-28-US-SJC-1',
-                                            '2021-04-29-US-SJC-2',
-                                            ])]) 
+pd.concat([sub.rename(columns={'millisSinceGpsEpoch':'millisSinceGpsEpoch_sub'}), bl_tst_df], axis=1)[['millisSinceGpsEpoch_sub', 'millisSinceGpsEpoch']].diff(axis=1)
 
 # %%
-# bl train mtv
-visualize_collection(bltr[bltr['collectionName'].isin([
-                                            # '2021-04-15-US-MTV-1', # 上側の複雑
-                                            '2021-04-28-US-MTV-1',
-                                            '2021-04-29-US-MTV-1',
-                                            ])])             
-
-# %%
-# bl train svl
-visualize_collection(bltr[bltr['collectionName'].isin([
-                                        '2021-03-10-US-SVL-1'
-                                            ])])
-# %%
-# train
-'2021-04-22-US-SJC-1',
-'2021-04-28-US-SJC-1',
-'2021-04-29-US-SJC-2',
-'2021-04-15-US-MTV-1',
-'2021-04-28-US-MTV-1',
-'2021-04-29-US-MTV-1',
-
-# test
-'2021-03-16-US-MTV-2', 
-'2021-04-08-US-MTV-1', 
-'2021-04-21-US-MTV-1', 
-'2021-04-28-US-MTV-2', 
-'2021-04-29-US-MTV-2'
-'2021-04-02-US-SJC-1',
-'2021-04-22-US-SJC-2',
-'2021-04-29-US-SJC-3',
+for cn in sample_df['phone'].unique():
+    display(sample_df[(sample_df['phone']==cn) & (sample_df['millisSinceGpsEpoch'].diff()<0)])
