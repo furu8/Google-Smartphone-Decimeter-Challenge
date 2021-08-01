@@ -268,16 +268,22 @@ test_df = make_test(sub, test_cname)
 
 # %%
 # save
-train_df.to_csv('../../data/interim/train/train_org_moving_or_not_4interpolate.csv', index=False)
-test_df.to_csv('../../data/interim/test/test_org_moving_or_not_4interpolate.csv', index=False)
+# train_df.to_csv('../../data/interim/train/train_org_moving_or_not_4interpolate.csv', index=False)
+# test_df.to_csv('../../data/interim/test/test_org_moving_or_not_4interpolate.csv', index=False)
 
+# %%
+# load
+train_df = pd.read_csv('../../data/interim/train/train_org_moving_or_not_4interpolate.csv')
+test_df = pd.read_csv('../../data/interim/test/test_org_moving_or_not_4interpolate.csv')
 # %%
 display(train_df)
 display(test_df)
 
 # %%
-display(train_df[['collectionName', 'phoneName']].drop_duplicates())
-display(test_df[['collectionName', 'phoneName']].drop_duplicates())
+cn2pn_train_df = train_df[['collectionName', 'phoneName']].drop_duplicates()
+cn2pn_test_df = test_df[['collectionName', 'phoneName']].drop_duplicates()
+display(cn2pn_train_df)
+display(cn2pn_test_df)
 
 # # %%
 # sjc_pi4_trn = train_df[(train_df['collectionName']=='2021-04-29-US-SJC-2') & (train_df['phoneName']=='Pixel4')]
@@ -309,9 +315,131 @@ display(test_df[['collectionName', 'phoneName']].drop_duplicates())
 # test_df['preds'] = lgbm(new_train_df, new_test_df, col, lgb_params)
 
 # %%
+def add_rolling_imu(df, cn2pn_df, col):
+    new_df = pd.DataFrame()
+    for cn, pn in cn2pn_df.values:
+        onedf = df[(df['collectionName']==cn) & (df['phoneName']==pn)].copy()
+        org_onedfs = [onedf[c].copy() for c in col]
+        for c in col:
+            onedf[f'{c}_mean'] = onedf[c].rolling(30).mean().fillna(onedf[c].mean())
+            onedf[f'{c}_std'] = onedf[c].rolling(30).std().fillna(onedf[c].mean())
+            onedf[f'{c}_max'] = onedf[c].rolling(30).max().fillna(onedf[c].mean())
+            onedf[f'{c}_min'] = onedf[c].rolling(30).min().fillna(onedf[c].mean())
+            onedf[f'{c}_median'] = onedf[c].rolling(30).median().fillna(onedf[c].median())
+            onedf[f'{c}_kurt'] = onedf[c].rolling(30).kurt().fillna(method='bfill')
+            onedf[f'{c}_skew'] = onedf[c].rolling(30).skew().fillna(method='bfill')
+            onedf[f'{c}_dif'] = onedf[c].diff(1).fillna(0)
+        for c, org_df in zip(col, org_onedfs):
+            onedf[c] = org_df
+        new_df = new_df.append(onedf)
+    return new_df.reset_index(drop=True)
+
+# %%
+%%time
+train_df = add_rolling_imu(train_df, cn2pn_train_df, col)
+test_df = add_rolling_imu(test_df, cn2pn_test_df, col)
+display(train_df)
+display(test_df)
+
+# %%
+aga_pred_phone = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean_train.csv')
+aga_pred_phone
+
+# %%
+train_df = pd.merge_asof(
+                train_df.sort_values('millisSinceGpsEpoch'),
+                aga_pred_phone[['millisSinceGpsEpoch', 'collectionName', 'phoneName', 'latDeg', 'lngDeg']].sort_values('millisSinceGpsEpoch'),
+                on='millisSinceGpsEpoch',
+                by=['collectionName', 'phoneName'],
+                direction='nearest'
+)
+train_df
+
+# %%
+train_df = train_df.drop(['latDeg_bs', 'lngDeg_bs'], axis=1).rename(columns={'latDeg':'latDeg_bs', 'lngDeg':'lngDeg_bs'})
+train_df
+# %%
+bl_tst_df = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean_test.csv')
+bl_tst_df
+
+# %%
+test_df = pd.merge_asof(
+                    test_df.sort_values('millisSinceGpsEpoch'),
+                    bl_tst_df[['millisSinceGpsEpoch', 'phoneName', 'collectionName', 'latDeg', 'lngDeg']].sort_values('millisSinceGpsEpoch'),
+                    on='millisSinceGpsEpoch',
+                    by=['collectionName', 'phoneName'],
+                    direction='nearest'
+)
+test_df
+
+# %%
+test_df = test_df.rename(columns={'latDeg':'latDeg_bs', 'lngDeg':'lngDeg_bs'})
+test_df
+
+# %%
+def add_pos(df, cn2pn_df):
+    new_df = pd.DataFrame()
+    for cn, pn in cn2pn_df.values:
+        onedf = df[(df['collectionName']==cn) & (df['phoneName']==pn)].copy()
+        lat = onedf['latDeg_bs'].copy()
+        lng = onedf['lngDeg_bs'].copy()
+        for c in ['latDeg_bs', 'lngDeg_bs']:
+            onedf[f'{c}_mean'] = onedf[c].rolling(30).mean().fillna(onedf[c].mean())
+            onedf[f'{c}_std'] = onedf[c].rolling(30).std().fillna(onedf[c].mean())
+            onedf[f'{c}_max'] = onedf[c].rolling(30).max().fillna(onedf[c].mean())
+            onedf[f'{c}_min'] = onedf[c].rolling(30).min().fillna(onedf[c].mean())
+            onedf[f'{c}_median'] = onedf[c].rolling(30).median().fillna(onedf[c].median())
+            onedf[f'{c}_kurt'] = onedf[c].rolling(30).kurt().fillna(method='bfill')
+            onedf[f'{c}_skew'] = onedf[c].rolling(30).skew().fillna(method='bfill')
+            onedf[f'{c}_diff'] = onedf[c].diff(1).fillna(0)
+        onedf['latDeg_bs'] = lat
+        onedf['lngDeg_bs'] = lng
+        new_df = new_df.append(onedf)
+
+    return new_df.reset_index(drop=True)
+
+# %%
+train_df = add_pos(train_df, cn2pn_train_df)
+test_df = add_pos(test_df, cn2pn_test_df)
+display(train_df)
+display(test_df)
+
+# %%
+features = [
+    'latDeg_bs', 'lngDeg_bs', 'latDeg_bs_mean', 'latDeg_bs_std',
+    'latDeg_bs_max', 'latDeg_bs_min', 'latDeg_bs_median', 'latDeg_bs_kurt',
+    'latDeg_bs_skew', 'latDeg_bs_diff', 
+    'lngDeg_bs_mean', 'lngDeg_bs_std',
+    'lngDeg_bs_max', 'lngDeg_bs_min', 'lngDeg_bs_median', 'lngDeg_bs_kurt',
+    'lngDeg_bs_skew', 'lngDeg_bs_diff',
+    'x_f_acce', 'y_f_acce', 'z_f_acce', 'x_f_magn', 'y_f_magn',
+    'z_f_magn', 'x_f_gyro', 'y_f_gyro', 'z_f_gyro', 
+    'x_f_acce_dif', 'y_f_acce_dif', 'z_f_acce_dif', 'x_f_magn_dif', 'y_f_magn_dif',
+    'z_f_magn_dif', 'x_f_gyro_dif', 'y_f_gyro_dif', 'z_f_gyro_dif', 
+    'x_f_acce_mean',
+    'x_f_acce_std', 'x_f_acce_max', 'x_f_acce_min', 'x_f_acce_median',
+    'x_f_acce_kurt', 'x_f_acce_skew', 'y_f_acce_mean', 'y_f_acce_std',
+    'y_f_acce_max', 'y_f_acce_min', 'y_f_acce_median', 'y_f_acce_kurt',
+    'y_f_acce_skew', 'z_f_acce_mean', 'z_f_acce_std', 'z_f_acce_max',
+    'z_f_acce_min', 'z_f_acce_median', 'z_f_acce_kurt', 'z_f_acce_skew',
+    'x_f_magn_mean', 'x_f_magn_std', 'x_f_magn_max', 'x_f_magn_min',
+    'x_f_magn_median', 'x_f_magn_kurt', 'x_f_magn_skew', 'y_f_magn_mean',
+    'y_f_magn_std', 'y_f_magn_max', 'y_f_magn_min', 'y_f_magn_median',
+    'y_f_magn_kurt', 'y_f_magn_skew', 'z_f_magn_mean', 'z_f_magn_std',
+    'z_f_magn_max', 'z_f_magn_min', 'z_f_magn_median', 'z_f_magn_kurt',
+    'z_f_magn_skew', 'x_f_gyro_mean', 'x_f_gyro_std', 'x_f_gyro_max',
+    'x_f_gyro_min', 'x_f_gyro_median', 'x_f_gyro_kurt', 'x_f_gyro_skew',
+    'y_f_gyro_mean', 'y_f_gyro_std', 'y_f_gyro_max', 'y_f_gyro_min',
+    'y_f_gyro_median', 'y_f_gyro_kurt', 'y_f_gyro_skew', 'z_f_gyro_mean',
+    'z_f_gyro_std', 'z_f_gyro_max', 'z_f_gyro_min', 'z_f_gyro_median',
+    'z_f_gyro_kurt', 'z_f_gyro_skew'
+]
+
+# %%
 %%time
 # cv
-df_train, df_test, pred_valid, pred_test, models = train_cv(train_df, test_df, col, lgb_params)
+# df_train, df_test, pred_valid, pred_test, models = train_cv(train_df, test_df, col, lgb_params)
+df_train, df_test, pred_valid, pred_test, models = train_cv(train_df, test_df, features, lgb_params)
 val_compare_df = pd.DataFrame({'tag_gt':df_train['tag'].values, 'tag_pred':pred_valid,})
 val_compare_df
 
@@ -371,38 +499,38 @@ collectionName	phoneName
 2021-04-28-US-MTV-1	Pixel4
 2021-04-28-US-MTV-1	SamsungS20Ultra
 
+only imu
 confusion matrix :  
  [[18459   876]
  [  365  8645]]
 accuracy score :  0.9562180278708767
+
+add rolling imu
+confusion matrix :  
+ [[24070   827]
+ [  296 12163]]
+accuracy score :  0.9699378948495556
+
+add rolling pos and bl_pos==aga_pred_mean
+confusion matrix :  
+ [[24094   325]
+ [  272 12665]]
+accuracy score :  0.9840186315451334
 """
 
 # %%
 # feature importanceを表示
-print_importances(models, col)
+# print_importances(models, col)
+print_importances(models, features)
 
 # %%
-bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv')
-bl_tst_df
-
+test_df['tag_pred'] = pred_test
+test_df
 # %%
-new_test_df = pd.merge_asof(
-                    test_df.sort_values('millisSinceGpsEpoch'),
-                    bl_tst_df[['millisSinceGpsEpoch', 'phoneName', 'collectionName', 'latDeg', 'lngDeg']].sort_values('millisSinceGpsEpoch'),
-                    on='millisSinceGpsEpoch',
-                    by=['collectionName', 'phoneName'],
-                    direction='nearest'
-)
-new_test_df
-
-# %%
-new_test_df['tag_pred'] = pred_test
-new_test_df
-# %%
-fig = px.scatter_mapbox(new_test_df,
+fig = px.scatter_mapbox(test_df.reset_index(drop=True),
                     # Here, plotly gets, (x,y) coordinates
-                    lat="latDeg",
-                    lon="lngDeg",
+                    lat="latDeg_bs",
+                    lon="lngDeg_bs",
                     text='phoneName',
 
                     #Here, plotly detects color of series
@@ -418,4 +546,7 @@ fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 fig.update_layout(title_text="GPS trafic")
 fig.show()
 # %%
-new_test_df['tag_pred'].hist()
+test_df['tag_pred'].hist()
+# %%
+# save
+test_df.to_csv('../../data/interim/test/moving_or_not_aga_pred_phone.csv', index=False)
