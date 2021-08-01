@@ -240,7 +240,7 @@ test_cname = [
     '2021-04-29-US-MTV-2',
     '2021-04-26-US-SVL-2',
     '2021-03-16-US-RWC-2',
-    '2021-03-25-US-PAO-1'
+    # '2021-03-25-US-PAO-1' # 学習にないので精度でない
 ]
 
 
@@ -255,8 +255,6 @@ lgb_params = {
 }
 
 sub = pd.read_csv('../../data/submission/sample_submission.csv')
-sub
-# %%
 sub = pd.concat([sub, sub['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
 sub
 # %%
@@ -275,6 +273,10 @@ test_df = make_test(sub, test_cname)
 # load
 train_df = pd.read_csv('../../data/interim/train/train_org_moving_or_not_4interpolate.csv')
 test_df = pd.read_csv('../../data/interim/test/test_org_moving_or_not_4interpolate.csv')
+test_df
+# %%
+# 学習側にないdrived_id除去
+test_df = test_df[test_df['collectionName']!='2021-03-25-US-PAO-1'].reset_index(drop=True)
 # %%
 display(train_df)
 display(test_df)
@@ -434,6 +436,7 @@ features = [
     'z_f_gyro_std', 'z_f_gyro_max', 'z_f_gyro_min', 'z_f_gyro_median',
     'z_f_gyro_kurt', 'z_f_gyro_skew'
 ]
+print(len(features))
 
 # %%
 %%time
@@ -527,7 +530,8 @@ print_importances(models, features)
 test_df['tag_pred'] = pred_test
 test_df
 # %%
-fig = px.scatter_mapbox(test_df.reset_index(drop=True),
+# fig = px.scatter_mapbox(test_df[test_df['collectionName']=='2021-03-16-US-RWC-2'],
+fig = px.scatter_mapbox(test_df,
                     # Here, plotly gets, (x,y) coordinates
                     lat="latDeg_bs",
                     lon="lngDeg_bs",
@@ -549,4 +553,5 @@ fig.show()
 test_df['tag_pred'].hist()
 # %%
 # save
-test_df.to_csv('../../data/interim/test/moving_or_not_aga_pred_phone.csv', index=False)
+test_df.to_csv('../../data/interim/test/moving_or_not_aga_pred_phone_PAOnothing.csv', index=False)
+# %%
