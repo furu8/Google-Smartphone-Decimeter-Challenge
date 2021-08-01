@@ -134,7 +134,7 @@ def mean_with_other_phones(df):
     return df
 
 # %%
-df = pd.read_csv('../../data/submission/imu_many_lat_lng_deg.csv')
+df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg.csv')
 df
 
 # %%
