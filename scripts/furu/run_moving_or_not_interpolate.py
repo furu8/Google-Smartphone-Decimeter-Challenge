@@ -15,13 +15,19 @@ sample_df = pd.read_csv('../../data/submission/sample_submission.csv')
 sample_df = pd.concat([sample_df, sample_df['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
 sample_df
 # %%
-name = 'kalman_s2g'
+# name = 'kalman_s2g'
+# name = 'imu_many_lat_lng_deg' # これ本来やる必要なかったやつ
+name = 'imu_many_lat_lng_deg_kalman'
 base_test_df = pd.read_csv(f'../../data/interim/{name}.csv')
 base_test_df
 
 # %%
 # Trueなら下のセル実行OK
-(sample_df[['collectionName', 'phoneName']].drop_duplicates() == base_test_df[['collectionName', 'phoneName']].drop_duplicates()).all().all()
+try:
+    print((sample_df[['collectionName', 'phoneName']].drop_duplicates() == base_test_df[['collectionName', 'phoneName']].drop_duplicates()).all().all())
+except:
+    base_test_df = pd.concat([base_test_df, base_test_df['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
+    print((sample_df[['collectionName', 'phoneName']].drop_duplicates() == base_test_df[['collectionName', 'phoneName']].drop_duplicates()).all().all())
 
 # %%
 sample_df['latDeg'] = base_test_df['latDeg'].copy()
@@ -74,10 +80,6 @@ def scatter_latlng(df):
     fig.show()
 
 # %%
-# org
-scatter_latlng(test_df)
-
-# %%
 cn2pn_df = test_df[['collectionName', 'phoneName']].drop_duplicates()
 cn2pn_df
 # %%
@@ -105,6 +107,10 @@ for cn, pn in cn2pn_df.values:
 display(test_df)
 display(new_test_df)
 display(new_test_df[new_test_df['collectionName']=='2021-03-16-US-RWC-2'])
+
+# %%
+# org
+scatter_latlng(test_df)
 # %%
 # mon後
 scatter_latlng(new_test_df)

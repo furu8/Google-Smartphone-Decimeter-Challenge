@@ -122,7 +122,9 @@ def mean_with_other_phones(df):
     return df
 
 # %%
-df = pd.read_csv('../../data/interim/kalman_s2g_moving_or_not_PAOnothing.csv')
+# df = pd.read_csv('../../data/interim/kalman_s2g_moving_or_not_PAOnothing.csv')
+# df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_moving_or_not_PAOnothing.csv') # 本来やる必要なかった
+df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_moving_or_not_PAOnothing.csv')
 df = pd.concat([df, df['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
 df
 # %%
@@ -202,5 +204,6 @@ sample_df = pd.concat([sample_df, sample_df['phone'].str.split('_', expand=True)
 sub = pd.read_csv('../../data/submission/sample_submission.csv')
 sub = sub.assign( latDeg=df_phone_mean['latDeg'], lngDeg=df_phone_mean['lngDeg'])
 sub
-sub.to_csv('../../data/submission/kalman_s2g_monPAOnothing_mp_pm.csv', index=False)
-
+# sub.to_csv('../../data/submission/kalman_s2g_monPAOnothing_mp_pm.csv', index=False)
+# sub.to_csv('../../data/submission/imu_many_lat_lng_deg_monPAOnothing_mp_pm.csv', index=False)
+sub.to_csv('../../data/submission/imu_many_lat_lng_deg_kalman_monPAOnothing_mp_pm.csv', index=False)
