@@ -156,6 +156,7 @@ def train_cv(df_train, df_test, tgt_axis, params):
         lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
 
         # 予測
+        # AttributeError: 'Booster' object has no attribute 'best_iteration_'
         pred_valid[val_idx] = lgb_model.predict(X_val, num_iteration = lgb_model.best_iteration_)
         pred_test += lgb_model.predict(df_test[feature_names], num_iteration = lgb_model.best_iteration_)
 
