@@ -143,8 +143,8 @@ def make_lerp_data(df):
     # Leave only records to be interpolated
     lerp_df = lerp_df[(lerp_df['latDeg'].isnull())&(lerp_df['phone']==lerp_df['phone_prev'])&(lerp_df['phone']==lerp_df['phone_next'])].copy()
     # calc lerp
-    lerp_df['latDeg'] = lerp_df['latDeg_prev'] + ((lerp_df['latDeg_next'] - lerp_df['latDeg_prev']) * ((lerp_df['millisSinceGpsEpoch'] - lerp_df['time_prev']) / (lerp_df['time_next'] - lerp_df['time_prev']))) 
-    lerp_df['lngDeg'] = lerp_df['lngDeg_prev'] + ((lerp_df['lngDeg_next'] - lerp_df['lngDeg_prev']) * ((lerp_df['millisSinceGpsEpoch'] - lerp_df['time_prev']) / (lerp_df['time_next'] - lerp_df['time_prev']))) 
+    lerp_df['latDeg'] = lerp_df['latDeg_prev'] + ((lerp_df['latDeg_next'] - lerp_df['latDeg_prev']) * ((lerp_df['millisSinceGpsEpoch'] - lerp_df['time_prev']) / (lerp_df['time_next'] - lerp_df['time_prev'])))
+    lerp_df['lngDeg'] = lerp_df['lngDeg_prev'] + ((lerp_df['lngDeg_next'] - lerp_df['lngDeg_prev']) * ((lerp_df['millisSinceGpsEpoch'] - lerp_df['time_prev']) / (lerp_df['time_next'] - lerp_df['time_prev'])))
 
     # Leave only the data that has a complete set of previous and next data.
     lerp_df = lerp_df[~lerp_df['latDeg'].isnull()]
@@ -161,7 +161,7 @@ def calc_mean_pred(df, lerp_df):
     mean_pred_df = mean_pred_df.merge(mean_pred_result[['collectionName', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']], on=['collectionName', 'millisSinceGpsEpoch'], how='left')
     return mean_pred_df
 # %%
-test_kf = pd.read_csv('./submission6.csv')
+test_kf = pd.read_csv('../../data/interim/kalman_s2gt_SJC.csv')
 test_kf
 # %%
 train_lerp = make_lerp_data(train_ro_kf)
@@ -195,22 +195,35 @@ def get_train_score(df, gt):
 print('kf + reject_outlier : ', get_train_score(train_ro_kf, ground_truth))
 print('+ phones_mean_pred : ', get_train_score(train_mean_pred, ground_truth))
 # %%
+base_test = pd.read_csv('../../data/interim/kalman_s2g_mean_predict_phone_mean.csv')
+# %%
 base_test = add_distance_diff(base_test)
 th = 50
 base_test.loc[((base_test['dist_prev'] > th) & (base_test['dist_next'] > th)), ['latDeg', 'lngDeg']] = np.nan
-
+#base_test.to_csv('../../data/interim/outlier_train.csv', index=False)
 test_kf = apply_kf_smoothing(base_test)
+# %%
+test_kf.to_csv('../../data/interim/kalman_s2g_mean_predict_phone_mean_kalman.csv', index=False)
 # %%
 test_lerp = make_lerp_data(test_kf)
 test_mean_pred = calc_mean_pred(test_kf, test_lerp)
-
+# %%
 sample_sub['latDeg'] = test_mean_pred['latDeg']
 sample_sub['lngDeg'] = test_mean_pred['lngDeg']
 #sample_sub.to_csv('submission4.csv', index=False)
 # %%
+test_mean_pred["heightAboveWgs84EllipsoidM"] = test_kf["heightAboveWgs84EllipsoidM"]
+test_mean_pred["phone"] = test_kf["phone"]
+# %%
+base_test["heightAboveWgs84EllipsoidM"] = test_mean_pred["heightAboveWgs84EllipsoidM"]
+base_test["phone"] = test_mean_pred["phone"]
+base_test#test_mean_pred
+# %%
+test_mean_pred.to_csv('../../data/interim/kalman_s2gt_SJC_mean_predict.csv', index=False)
+# %%
 import plotly.express as px
 # %%
-fig = px.scatter_mapbox(sub_df, #line_points, #kf_kf_smoothed_baseline[kf_kf_smoothed_baseline["phone"] == "2021-04-22-US-SJC-2_SamsungS20Ultra"],
+fig = px.scatter_mapbox(test_mean_pred, #line_points, #kf_kf_smoothed_baseline[kf_kf_smoothed_baseline["phone"] == "2021-04-22-US-SJC-2_SamsungS20Ultra"],
 
                     # Here, plotly gets, (x,y) coordinates
                     lat="latDeg",
@@ -231,7 +244,9 @@ new_column = lambda x:x.split('_')
 # %%
 inter = pd.DataFrame(test_kf["phone"].apply(new_column))
 # %%
-test_kf
+test_mean_pred
+# %%
+sub_df
 # %%
 add_column = lambda x:x[1]
 # %%
@@ -247,4 +262,7 @@ sub_df = sub_df.assign(
     latDeg = sample_sub.latDeg,
     lngDeg = sample_sub.lngDeg
 )
-sub_df.to_csv('submission7.csv', index=False)
+sub_df.to_csv('./submission16.csv', index=False)
+# %%
+base_train.describe()
+# %%
