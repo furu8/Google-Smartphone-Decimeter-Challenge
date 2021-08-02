@@ -226,60 +226,60 @@ def ECEF_to_WGS84(x,y,z):
 def get_xyz(df_all, dataset_name):
     # baseline: lat/lngDeg -> x/y/z
     df_all['Xbl'], df_all['Ybl'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_bl'], x['lngDeg_bl'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xaga_mean_predict_phone_mean'], df_all['Yaga_mean_predict_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_mean_predict_phone_mean'], x['lngDeg_aga_mean_predict_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xaga_phone_mean_mean_predict'], df_all['Yaga_phone_mean_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_phone_mean_mean_predict'], x['lngDeg_aga_phone_mean_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xaga_phone_mean'], df_all['Yaga_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_phone_mean'], x['lngDeg_aga_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xaga_mean_predict'], df_all['Yaga_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_mean_predict'], x['lngDeg_aga_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xkalman_mean_predict_phone_mean'], df_all['Ykalman_mean_predict_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_mean_predict_phone_mean'], x['lngDeg_kalman_mean_predict_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xkalman_mean_predict'], df_all['Ykalman_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_mean_predict'], x['lngDeg_kalman_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xkalman_phone_mean_mean_predict'], df_all['Ykalman_phone_mean_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_phone_mean_mean_predict'], x['lngDeg_kalman_phone_mean_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
-    df_all['Xkalman_phone_mean'], df_all['Ykalman_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_phone_mean'], x['lngDeg_kalman_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xaga_mean_predict_phone_mean'], df_all['Yaga_mean_predict_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_mean_predict_phone_mean'], x['lngDeg_aga_mean_predict_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xaga_phone_mean_mean_predict'], df_all['Yaga_phone_mean_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_phone_mean_mean_predict'], x['lngDeg_aga_phone_mean_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xaga_phone_mean'], df_all['Yaga_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_phone_mean'], x['lngDeg_aga_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xaga_mean_predict'], df_all['Yaga_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_aga_mean_predict'], x['lngDeg_aga_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xkalman_mean_predict_phone_mean'], df_all['Ykalman_mean_predict_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_mean_predict_phone_mean'], x['lngDeg_kalman_mean_predict_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xkalman_mean_predict'], df_all['Ykalman_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_mean_predict'], x['lngDeg_kalman_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xkalman_phone_mean_mean_predict'], df_all['Ykalman_phone_mean_mean_predict'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_phone_mean_mean_predict'], x['lngDeg_kalman_phone_mean_mean_predict'], x['heightAboveWgs84EllipsoidM']), axis=1))
+    # df_all['Xkalman_phone_mean'], df_all['Ykalman_phone_mean'], df_all['Zbl'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_kalman_phone_mean'], x['lngDeg_kalman_phone_mean'], x['heightAboveWgs84EllipsoidM']), axis=1))
     
     if dataset_name == 'train':
         # gt: lat/lngDeg -> x/y/z
         df_all['Xgt'], df_all['Ygt'], df_all['Zgt'] = zip(*df_all.apply(lambda x: WGS84_to_ECEF(x['latDeg_gt'], x['lngDeg_gt'], x['heightAboveWgs84EllipsoidM']), axis=1))
         # copy lat/lngDeg
         lat_lng_df = df_all[['latDeg_gt','lngDeg_gt', 'latDeg_bl', 'lngDeg_bl', 
-            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
-            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
-            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
-            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
-            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
-            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
-            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
-            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+            # 'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            # 'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            # 'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            # 'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            # 'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            # 'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            # 'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            # 'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
         ]]
         df_all.drop(['latDeg_gt','lngDeg_gt', 'latDeg_bl', 'lngDeg_bl',
-            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
-            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
-            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
-            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
-            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
-            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
-            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
-            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+            # 'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            # 'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            # 'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            # 'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            # 'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            # 'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            # 'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            # 'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
         ], axis = 1, inplace = True)
     elif dataset_name == 'test':
         # copy lat/lngDeg
         lat_lng_df = df_all[['latDeg_bl', 'lngDeg_bl',
-            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
-            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
-            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
-            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
-            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
-            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
-            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
-            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+            # 'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            # 'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            # 'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            # 'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            # 'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            # 'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            # 'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            # 'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
         ]]
         df_all.drop(['latDeg_bl', 'lngDeg_bl', 'latDeg','lngDeg',
-            'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
-            'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
-            'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
-            'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
-            'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
-            'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
-            'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
-            'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
+            # 'latDeg_aga_mean_predict_phone_mean', 'lngDeg_aga_mean_predict_phone_mean',
+            # 'latDeg_aga_phone_mean_mean_predict', 'lngDeg_aga_phone_mean_mean_predict',
+            # 'latDeg_aga_mean_predict', 'lngDeg_aga_mean_predict',
+            # 'latDeg_aga_phone_mean', 'lngDeg_aga_phone_mean',
+            # 'latDeg_kalman_mean_predict_phone_mean', 'lngDeg_kalman_mean_predict_phone_mean',
+            # 'latDeg_kalman_phone_mean_mean_predict', 'lngDeg_kalman_phone_mean_mean_predict',
+            # 'latDeg_kalman_mean_predict', 'lngDeg_kalman_mean_predict',
+            # 'latDeg_kalman_phone_mean', 'lngDeg_kalman_phone_mean',
         ], axis = 1, inplace = True)     
         
     return lat_lng_df, df_all
@@ -357,14 +357,14 @@ def remove_other_axis_feats(df_all, tgt_axis):
                      'MagXMicroT', 'MagYMicroT', 'MagZMicroT',
                      'yawZDeg', 'rollYDeg', 'pitchXDeg',
                      'Xbl', 'Ybl', 'Zbl',
-                    'Xaga_mean_predict_phone_mean', 'Xaga_mean_predict_phone_mean',
-                    'Xaga_phone_mean_mean_predict', 'Xaga_phone_mean_mean_predict',
-                    'Xaga_mean_predict', 'Xaga_mean_predict',
-                    'Xaga_phone_mean', 'Xaga_phone_mean',
-                    'Xkalman_mean_predict_phone_mean', 'Xkalman_mean_predict_phone_mean',
-                    'Xkalman_phone_mean_mean_predict', 'Xkalman_phone_mean_mean_predict',
-                    'Xkalman_mean_predict', 'Xkalman_mean_predict',
-                    'Xkalman_phone_mean', 'Xkalman_phone_mean',
+                    # 'Xaga_mean_predict_phone_mean', 'Xaga_mean_predict_phone_mean',
+                    # 'Xaga_phone_mean_mean_predict', 'Xaga_phone_mean_mean_predict',
+                    # 'Xaga_mean_predict', 'Xaga_mean_predict',
+                    # 'Xaga_phone_mean', 'Xaga_phone_mean',
+                    # 'Xkalman_mean_predict_phone_mean', 'Xkalman_mean_predict_phone_mean',
+                    # 'Xkalman_phone_mean_mean_predict', 'Xkalman_phone_mean_mean_predict',
+                    # 'Xkalman_mean_predict', 'Xkalman_mean_predict',
+                    # 'Xkalman_phone_mean', 'Xkalman_phone_mean',
                     ]
     tgt_imu_feats = []
     for axis in ['X', 'Y', 'Z']:
@@ -477,6 +477,32 @@ print('Baseline Test shape:', bl_tst_df.shape)
 print('Test shape:', sample_df.shape)
 
 # %%
+train_aga_pred_phone = pd.read_csv('../../data/interim/aga_mean_predict_phone_mean_train.csv')
+train_aga_pred_phone
+
+# %%
+train_aga_pred_phone[train_aga_pred_phone['millisSinceGpsEpoch'].diff()<0]
+
+# %%
+
+bl_trn_df[bl_trn_df['millisSinceGpsEpoch'].diff()<0]
+
+# %%
+for cn in sample_df['phone'].unique():
+    display(sample_df[(sample_df['phone']==cn) & (sample_df['millisSinceGpsEpoch'].diff()<0)])
+
+# %%
+sample_df[3485:3490]
+# %%
+bl_trn_df[5525:5530]
+# %%
+pd.merge_asof(train_aga_pred_phone.sort_values('millisSinceGpsEpoch'), 
+            bl_trn_df[['millisSinceGpsEpoch', 'collectionName', 'phoneName', 'heightAboveWgs84EllipsoidM']].sort_values('millisSinceGpsEpoch'),
+            on='millisSinceGpsEpoch',
+            by=['collectionName', 'phoneName'],
+            direction='nearest'
+)
+# %%
 train_pahts = gb.glob('../../data/interim/*_train.csv')
 
 latlng_dict = {}
@@ -507,7 +533,8 @@ for key, value in latlng_dict.items():
 bl_trn_df
 
 # %%
-bl_trn_df.to_csv('../../data/interim/train/predicted_many_lat_lng_deg.csv', index=False)
+bl_trn_df.to_csv('../../data/interim/train/predicted_aga_pred_phone.csv', index=False)
+# bl_trn_df.to_csv('../../data/interim/train/predicted_many_lat_lng_deg.csv', index=False)
 
 # %%
 bl_trn_df = pd.read_csv('../../data/interim/train/predicted_many_lat_lng_deg.csv')
