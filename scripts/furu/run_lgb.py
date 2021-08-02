@@ -62,6 +62,7 @@ def extract_MTV(train_df, test_df):
                     (test_df['collectionName']=='2021-04-21-US-MTV-1')
                     | (test_df['collectionName']=='2021-04-28-US-MTV-2')
                     | (test_df['collectionName']=='2021-04-29-US-MTV-2')
+                    | (test_df['collectionName']=='2021-03-16-US-RWC-2')
                 ]
 
     # drop
@@ -142,12 +143,12 @@ def train_cv(df_train, df_test, tgt_axis, params):
 
         # パラメータ探索
         # best_params, tuning_history = dict(), list()
-        lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
+        model = lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
                             verbose_eval=0,
                             # best_params=best_params,
                             # tuning_history=tuning_history
                     )
-        best_params = lgb_o.params
+        best_params = model.params
         print('Best Params:', best_params)
         # print('Tuning history:', tuning_history)
 
@@ -213,7 +214,8 @@ def main():
         #         # '2021-04-08-US-MTV-1', 
         #         '2021-04-21-US-MTV-1', 
         #         '2021-04-28-US-MTV-2', 
-        #         '2021-04-29-US-MTV-2'
+        #         '2021-04-29-US-MTV-2',
+        #         '2021-03-16-US-RWC-2'
         #     ],
         # 'SVL': ['2021-04-26-US-SVL-2'],
     }
