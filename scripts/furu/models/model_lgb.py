@@ -10,36 +10,24 @@ class ModelLGB(Model):
     def train(self, tr_x, tr_y, va_x=None, va_y=None):
         # データのセット
         isvalid = va_x is not None
-        lgb_train = lgb.Dataset(tr_x, tr_y)
-        if isvalid:
-            lgb_valid = lgb.Dataset(va_x, va_y)
 
         # ハイパーパラメータの設定
         params = dict(self.params)
         # num_round = params.pop('num_round')
 
+        model = lgb.LGBMRegressor(**params)
+
         # 学習
         if isvalid:
-            self.model = lgb.train(params, lgb_train, valid_sets=lgb_valid)
-            # best_params, tuning_history = dict(), list()
-            # booster = lgb.train(params, lgb_train, valid_sets=lgb_valid,
-            #                     verbose_eval=0,
-            #                     best_params=best_params,
-            #                     tuning_history=tuning_history)
- 
-            # print('Best Params:', best_params)
-            # print('Tuning history:', tuning_history)
+            self.model = model.fit(tr_x, tr_y,
+                                eval_names=['train', 'valid'],
+                                eval_set=[(tr_x, tr_y), (va_x, va_y)],
+                                verbose=0,
+                                eval_metric=params['metric'],
+                                early_stopping_rounds=params['early_stopping_rounds']
+                        )
         else:
-            self.model = lgb.train(params, lgb_train)
-
-        # if isvalid:
-        #     early_stopping_rounds = params.pop('early_stopping_rounds')
-        #     watchlist = [(dtrain, 'train'), (dvalid, 'eval')]
-        #     self.model = xgb.train(params, dtrain, num_round, evals=watchlist,
-        #                            early_stopping_rounds=early_stopping_rounds)
-        # else:
-        #     watchlist = [(dtrain, 'train')]
-        #     self.model = xgb.train(params, dtrain, num_round, evals=watchlist)
+            self.model = model.fit(tr_x, tr_y)
 
 
     def predict(self, te_x):
