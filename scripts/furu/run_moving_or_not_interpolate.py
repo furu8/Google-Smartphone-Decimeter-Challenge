@@ -17,7 +17,9 @@ sample_df
 # %%
 # name = 'kalman_s2g'
 # name = 'imu_many_lat_lng_deg' # これ本来やる必要なかったやつ
-name = 'imu_many_lat_lng_deg_kalman'
+# name = 'imu_many_lat_lng_deg_kalman'
+# name = 'imu_many_lat_lng_deg_kalman_mean_predict_phone_mean'
+name = 'kalman_s2g_mean_predict_phone_mean'
 base_test_df = pd.read_csv(f'../../data/interim/{name}.csv')
 base_test_df
 
