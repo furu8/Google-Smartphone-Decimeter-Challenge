@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 import lightgbm as lgb
 import optuna.integration.lightgbm as lgb_o
-from models import Runner, ModelLGB
+from models import Runner, ModelLGB, ModelRF
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold, TimeSeriesSplit
 import matplotlib.pyplot as plt
 import glob as gb
@@ -99,7 +100,7 @@ def evaluate_lat_lng_dist(df):
 
     return dist_list
 
-def train_cv(df_train, df_test, tgt_axis, run_name, params):
+def train_cv(df_train, df_test, tgt_axis, run_name, stacking_model, params):
     feature_names = df_train.drop(['Xgt', 'Ygt', 'Zgt'], axis=1).columns # gt除外
     target = '{}gt'.format(tgt_axis)
 
@@ -115,8 +116,8 @@ def train_cv(df_train, df_test, tgt_axis, run_name, params):
         X_val = df_train.iloc[val_idx][feature_names]
         Y_val = df_train.iloc[val_idx][target]
 
-        lgb_model = ModelLGB(f'{run_name}_{fold_id+1}', params)
-        lgb_model.train(X_train, Y_train, X_val, Y_val)
+        model = stacking_model(f'{run_name}_{fold_id+1}', params)
+        model.train(X_train, Y_train, X_val, Y_val)
 
         # lgb_train = lgb.Dataset(X_train, Y_train)
         # lgb_valid = lgb.Dataset(X_val, Y_val)
@@ -136,15 +137,14 @@ def train_cv(df_train, df_test, tgt_axis, run_name, params):
         # lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
 
         # 予測
-        pred_valid[val_idx] = lgb_model.predict(X_val)
+        pred_valid[val_idx] = model.predict(X_val)
         # pred_valids.append(pred_valid)
         # val_idxes.append(val_idx)
 
-        pred_test += lgb_model.predict(df_test[feature_names])
+        pred_test += model.predict(df_test[feature_names])
 
-        scores.append(lgb_model.model.best_score_['valid']['l2'])
-        # models.append(model)
-        models.append(lgb_model.model)
+        scores.append(mean_squared_error(Y_val, pred_valid[val_idx]))
+        models.append(model.model)
     
     # val_idxes = np.concatenate(val_idxes)
     # pred_valids = np.concatenate(pred_valids, axis=0)
@@ -189,7 +189,7 @@ def calc_haversine(lat1, lon1, lat2, lon2):
     dist = 6_367_000 * c
     return dist
 
-def run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, params):
+def run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, model, params):
     print(drived_id)
     if drived_id == 'SJC':
         x_train_df, x_test_df = extract_SJC(x_trn_df, x_tst_df)
@@ -212,9 +212,9 @@ def run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_t
     z_train_df_droped = z_train_df.drop(['collectionName', 'phoneName'], axis=1)
     z_test_df_droped = z_test_df.drop(['collectionName', 'phoneName'], axis=1)
 
-    df_train_x, df_test_x, pred_valid_x, pred_test_x, models_x = train_cv(x_train_df_droped, x_test_df_droped, 'X', run_name, params)
-    df_train_y, df_test_y, pred_valid_y, pred_test_y, models_y = train_cv(y_train_df_droped, y_test_df_droped, 'Y', run_name, params)
-    df_train_z, df_test_z, pred_valid_z, pred_test_z, models_z = train_cv(z_train_df_droped, z_test_df_droped, 'Z', run_name, params)
+    df_train_x, df_test_x, pred_valid_x, pred_test_x, models_x = train_cv(x_train_df_droped, x_test_df_droped, 'X', run_name, model, params)
+    df_train_y, df_test_y, pred_valid_y, pred_test_y, models_y = train_cv(y_train_df_droped, y_test_df_droped, 'Y', run_name, model, params)
+    df_train_z, df_test_z, pred_valid_z, pred_test_z, models_z = train_cv(z_train_df_droped, z_test_df_droped, 'Z', run_name, model, params)
 
     val_compare_df = pd.DataFrame({'Xgt':df_train_x['Xgt'].values, 'Xpred':pred_valid_x,
                             'Ygt':df_train_y['Ygt'].values, 'Ypred':pred_valid_y,
@@ -244,12 +244,12 @@ def run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_t
     # display(test_pred_df)
     
     # plot
-    # val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
-    # plt.show()
-    # val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
-    # plt.show()
-    # val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
-    # plt.show()
+    val_compare_df[['Xgt', 'Xpred']].plot(figsize=(16,8))
+    plt.show()
+    val_compare_df[['Ygt', 'Ypred']].plot(figsize=(16,8))
+    plt.show()
+    val_compare_df[['Zgt', 'Zpred']].plot(figsize=(16,8))
+    plt.show()
 
     # IMU Prediction vs. GT
     val_compare_df['dist'] = calc_haversine(val_compare_df['latDeg_gt'], val_compare_df['lngDeg_gt'], 
@@ -296,17 +296,24 @@ cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 # print(test_df.columns)
 
 # ここをいじる
-run_name = 'lgbm' # 名前変えてね
+# run_name = 'lgbm' # 名前変えてね
+# params = {
+#     'metric':'mse',
+#     'objective':'regression',
+#     'seed':2021,
+#     'boosting_type':'gbdt',
+#     'early_stopping_rounds':10,
+#     'subsample':0.7,
+#     'feature_fraction':0.7,
+#     'bagging_fraction': 0.7,
+#     'reg_lambda': 10
+# }
+
+run_name = 'rfm'
 params = {
-    'metric':'mse',
-    'objective':'regression',
-    'seed':2021,
-    'boosting_type':'gbdt',
-    'early_stopping_rounds':10,
-    'subsample':0.7,
-    'feature_fraction':0.7,
-    'bagging_fraction': 0.7,
-    'reg_lambda': 10
+    'max_depth': 5,
+    'n_estimators': 20,
+    'random_state': 2021,
 }
 
 x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
@@ -317,7 +324,8 @@ z_trn_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
 z_tst_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
 for drived_id in cns_dict.keys():
-    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, params)
+    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
+    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
     stacking_dfs = pd.concat([stacking_dfs, stacking_df], axis=0) 
 
 display(stacking_dfs)
@@ -334,6 +342,13 @@ dist_50: 2.5158099830554246
 dist_95: 8.057531182140774
 avg_dist_50_95: 5.2866705825980995
 avg_dist: 3.1502449611507966
+"""
+
+"""
+dist_50: 81.15676556283807
+dist_95: 179.7289184927825
+avg_dist_50_95: 130.4428420278103
+avg_dist: 92.83598653553565
 """
 
 # %%
