@@ -31,7 +31,7 @@ class ModelLGB(Model):
 
 
     def predict(self, te_x):
-        return self.model.predict(te_x, num_iteration=self.model.best_iteration)
+        return self.model.predict(te_x, num_iteration=self.model.best_iteration_)
 
 
     def save_model(self):
