@@ -117,7 +117,7 @@ def train_cv(df_train, df_test, tgt_axis, params):
     feature_names = df_train.drop(['Xgt', 'Ygt', 'Zgt'], axis=1).columns # gt除外
     target = '{}gt'.format(tgt_axis)
 
-    kfold = KFold(n_splits=3, shuffle=True, random_state=2021)
+    kfold = KFold(n_splits=4, shuffle=True, random_state=2021)
 
     pred_valid = np.zeros((len(df_train),)) 
     pred_test = np.zeros((len(df_test),)) 
@@ -128,32 +128,32 @@ def train_cv(df_train, df_test, tgt_axis, params):
         X_val = df_train.iloc[val_idx][feature_names]
         Y_val = df_train.iloc[val_idx][target]
 
-        lgb_train = lgb.Dataset(X_train, Y_train)
-        lgb_valid = lgb.Dataset(X_val, Y_val)
+        # lgb_train = lgb.Dataset(X_train, Y_train)
+        # lgb_valid = lgb.Dataset(X_val, Y_val)
 
-        # model = lgb.LGBMRegressor(**params)
-        # lgb_model = model.fit(X_train, 
-        #                       Y_train,
-        #                       eval_names=['train', 'valid'],
-        #                       eval_set=[(X_train, Y_train), (X_val, Y_val)],
-        #                       verbose=0,
-        #                       eval_metric=params['metric'],
-        #                       early_stopping_rounds=params['early_stopping_rounds']
-        #             )
+        model = lgb.LGBMRegressor(**params)
+        lgb_model = model.fit(X_train, 
+                              Y_train,
+                              eval_names=['train', 'valid'],
+                              eval_set=[(X_train, Y_train), (X_val, Y_val)],
+                              verbose=0,
+                              eval_metric=params['metric'],
+                              early_stopping_rounds=params['early_stopping_rounds']
+                    )
 
         # パラメータ探索
         # best_params, tuning_history = dict(), list()
-        model = lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
-                            verbose_eval=0,
-                            # best_params=best_params,
-                            # tuning_history=tuning_history
-                    )
-        best_params = model.params
-        print('Best Params:', best_params)
+        # model = lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
+        #                     verbose_eval=0,
+        #                     # best_params=best_params,
+        #                     # tuning_history=tuning_history
+        #             )
+        # best_params = model.params
+        # print('Best Params:', best_params)
         # print('Tuning history:', tuning_history)
 
         # 学習
-        lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
+        # lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
 
         # 予測
         # AttributeError: 'Booster' object has no attribute 'best_iteration_'
@@ -210,14 +210,14 @@ def main():
                 '2021-04-22-US-SJC-2', 
                 '2021-04-29-US-SJC-3'
             ],
-        # 'MTV': [
-        #         # '2021-03-16-US-MTV-2',
-        #         # '2021-04-08-US-MTV-1', 
-        #         '2021-04-21-US-MTV-1', 
-        #         '2021-04-28-US-MTV-2', 
-        #         '2021-04-29-US-MTV-2',
-        #         '2021-03-16-US-RWC-2'
-        #     ],
+        'MTV': [
+                # '2021-03-16-US-MTV-2',
+                # '2021-04-08-US-MTV-1', 
+                '2021-04-21-US-MTV-1', 
+                '2021-04-28-US-MTV-2', 
+                '2021-04-29-US-MTV-2',
+                '2021-03-16-US-RWC-2'
+            ],
         # 'SVL': ['2021-04-26-US-SVL-2'],
     }
     # '2021-03-25-US-PAO-1'
@@ -230,23 +230,23 @@ def main():
     # display(train_df)
     # print(test_df.columns)
 
-    # params = {
-    #     'metric':'mse',
-    #     'objective':'regression',
-    #     'seed':2021,
-    #     'boosting_type':'gbdt',
-    #     'early_stopping_rounds':10,
-    #     'subsample':0.7,
-    #     'feature_fraction':0.7,
-    #     'bagging_fraction': 0.7,
-    #     'reg_lambda': 10
-    # }
     params = {
-        'objective': 'mean_squared_error',
-        'metric': 'mse',
-        "verbosity": -1,
-        "boosting_type": "gbdt",
+        'metric':'mse',
+        'objective':'regression',
+        'seed':2021,
+        'boosting_type':'gbdt',
+        'early_stopping_rounds':10,
+        'subsample':0.7,
+        'feature_fraction':0.7,
+        'bagging_fraction': 0.7,
+        'reg_lambda': 10
     }
+    # params = {
+    #     'objective': 'mean_squared_error',
+    #     'metric': 'mse',
+    #     "verbosity": -1,
+    #     "boosting_type": "gbdt",
+    # }
 
     x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
     x_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_many_lat_lng_deg.csv')
@@ -343,11 +343,12 @@ def main():
                 bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg'].values
                 bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 4] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'lngDeg'].values
 
-        # save
-        # output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
-        # display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
-        # output.to_csv(f'../../data/submission/imu_many_lat_lng_deg_lgbm.csv', index=False)
+    # save
+    output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
+    display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
+    output.to_csv(f'../../data/submission/imu_many_lat_lng_deg_lgbm.csv', index=False)
 
+# split_num = 2
 """base SJC
 dist_50: 5.063121933291297
 dist_95: 16.939074672339274
@@ -383,31 +384,44 @@ avg_dist_50_95: 17.91630332732075
 avg_dist: 9.837515945117834
 """
 
+# split_num = 4
+"""many_lat_lng_deg SJC
+dist_50: 3.532140410316554
+dist_95: 11.024273029511706
+avg_dist_50_95: 7.27820671991413
+avg_dist: 4.50314864523743
+"""
+
+"""many_lat_lng_deg MTV
+dist_50: 2.5158099830554246
+dist_95: 8.057531182140774
+avg_dist_50_95: 5.2866705825980995
+avg_dist: 3.1502449611507966
+"""
+
 if __name__ == '__main__':
     main()
 
 # %%
-bl_tst_df = pd.read_csv('../../data/raw/baseline_locations_test.csv').sort_values('millisSinceGpsEpoch')
-bl_tst_df
-# %%
-sub = pd.read_csv('../../data/submission/sample_submission.csv')
-sub
+import plotly.express as px
+def scatter_latlng(df):
+    fig = px.scatter_mapbox(df,
+                        # Here, plotly gets, (x,y) coordinates
+                        lat="latDeg",
+                        lon="lngDeg",
+                        # text='phoneName',
 
-# %%
-pd.concat([sub, bl_tst_df], axis=1)
-# %%
-sub['dif'] = bl_tst_df['millisSinceGpsEpoch']==sub['millisSinceGpsEpoch']
-sub[sub['dif']==False]
-# %%
-sub[sub['millisSinceGpsEpoch'].diff()<0]
-# %%
-bl_tst_df[bl_tst_df['millisSinceGpsEpoch'].diff()<0]
-# %%
-sub.rename(columns={'millisSinceGpsEpoch':'millisSinceGpsEpoch_sub'})
+                        #Here, plotly detects color of series
+                        # color="tag_pred",
+                        # labels="collectionName",
 
+                        zoom=14.5,
+                        center={"lat":37.334, "lon":-121.89},
+                        height=600,
+                        width=800)
+    fig.update_layout(mapbox_style='stamen-terrain')
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    fig.update_layout(title_text="GPS trafic")
+    fig.show()
 # %%
-pd.concat([sub.rename(columns={'millisSinceGpsEpoch':'millisSinceGpsEpoch_sub'}), bl_tst_df], axis=1)[['millisSinceGpsEpoch_sub', 'millisSinceGpsEpoch']].diff(axis=1)
-
-# %%
-for cn in sample_df['phone'].unique():
-    display(sample_df[(sample_df['phone']==cn) & (sample_df['millisSinceGpsEpoch'].diff()<0)])
+scatter_latlng(pd.read_csv('../../data/submission/imu_many_lat_lng_deg_lgbm.csv'))
