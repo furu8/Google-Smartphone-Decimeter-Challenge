@@ -19,7 +19,9 @@ sample_df
 # name = 'imu_many_lat_lng_deg' # これ本来やる必要なかったやつ
 # name = 'imu_many_lat_lng_deg_kalman'
 # name = 'imu_many_lat_lng_deg_kalman_mean_predict_phone_mean'
-name = 'kalman_s2g_mean_predict_phone_mean'
+# name = 'kalman_s2g_mean_predict_phone_mean'
+# name = 'imu_many_lat_lng_deg_kalman_mp'
+name = 'imu_many_lat_lng_deg_kalman_s2gt_SJC_mean_predict'
 base_test_df = pd.read_csv(f'../../data/interim/{name}.csv')
 base_test_df
 
@@ -84,6 +86,7 @@ def scatter_latlng(df):
 # %%
 cn2pn_df = test_df[['collectionName', 'phoneName']].drop_duplicates()
 cn2pn_df
+
 # %%
 %%time
 new_test_df = test_df.copy()
@@ -93,12 +96,19 @@ for cn, pn in cn2pn_df.values:
     onedf = test_df[(test_df['collectionName']==cn) & (test_df['phoneName']==pn)].copy()
     idxes = onedf.index
     new_lat, new_lng = None, None
+    first1_flag = False
+    print(cn, pn)
     for lat, lng, tag in onedf[['latDeg', 'lngDeg', 'tag_pred']].values:
         if tag < 1:
+            if first1_flag:
+                new_test_df.loc[idxes[:idx], 'latDeg'] = lat
+                new_test_df.loc[idxes[:idx], 'lngDeg'] = lng
+                first1_flag = False
             new_lat = lat
             new_lng = lng
         elif tag == 1:
             if new_lat is None and new_lng is None:
+                first1_flag = True
                 pass
             else:
                 new_test_df.loc[idxes[idx], 'latDeg'] = new_lat
@@ -109,7 +119,10 @@ for cn, pn in cn2pn_df.values:
 display(test_df)
 display(new_test_df)
 display(new_test_df[new_test_df['collectionName']=='2021-03-16-US-RWC-2'])
+display(new_test_df[new_test_df['collectionName']=='2021-04-29-US-SJC-3'])
 
+# %%
+scatter_latlng(new_test_df[new_test_df['collectionName']=='2021-04-29-US-SJC-3'])
 # %%
 # org
 scatter_latlng(test_df)
@@ -155,7 +168,7 @@ sub = pd.read_csv('../../data/submission/sample_submission.csv')
 sub = sub.assign(latDeg=sample_df['latDeg'], lngDeg=sample_df['lngDeg'])
 sub
 # %%
-sub.to_csv(f'../../data/interim/{name}_moving_or_not_PAOnothing.csv', index=False)
+sub.to_csv(f'../../data/interim/{name}_moving_or_not_kai_PAOnothing.csv', index=False)
 
 # %%
 fig = px.scatter_mapbox(sub,
