@@ -49,7 +49,8 @@ def apply_kf_smoothing(df, kf_):
     return df
 
 # %%
-df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg.csv')
+# df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg.csv')
+df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_lgbm.csv')
 df
 
 # %%
@@ -134,4 +135,4 @@ visualize_collection(df_kf, cns_dict['MTV'])
 sub = pd.read_csv('../../data/submission/sample_submission.csv')
 sub = sub.assign( latDeg=df_kf['latDeg'], lngDeg=df_kf['lngDeg'])
 sub
-sub.to_csv('../../data/interim/imu_many_lat_lng_deg_kalman.csv', index=False)
+sub.to_csv('../../data/interim/imu_many_lat_lng_deg_lgbm_kalman.csv', index=False)

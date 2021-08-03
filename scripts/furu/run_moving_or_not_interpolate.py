@@ -21,7 +21,8 @@ sample_df
 # name = 'imu_many_lat_lng_deg_kalman_mean_predict_phone_mean'
 # name = 'kalman_s2g_mean_predict_phone_mean'
 # name = 'imu_many_lat_lng_deg_kalman_mp'
-name = 'imu_many_lat_lng_deg_kalman_s2gt_SJC_mean_predict'
+# name = 'imu_many_lat_lng_deg_kalman_s2gt_SJC_mean_predict'
+name = 'imu_many_lat_lng_deg_lgbm_kalman_mp'
 base_test_df = pd.read_csv(f'../../data/interim/{name}.csv')
 base_test_df
 

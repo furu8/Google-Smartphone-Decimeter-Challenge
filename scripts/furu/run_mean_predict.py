@@ -70,7 +70,8 @@ def calc_mean_pred(df, lerp_df):
 # df = pd.read_csv('../../data/interim/kalman_s2g_moving_or_not_PAOnothing.csv')
 # df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_moving_or_not_PAOnothing.csv') # 本来やる必要なかった
 # df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_moving_or_not_PAOnothing.csv')
-df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman.csv')
+# df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman.csv')
+df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_lgbm_kalman.csv')
 df = pd.concat([df, df['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
 df
 # %%
@@ -145,4 +146,4 @@ sub = sub.assign( latDeg=df_mean_pred['latDeg'], lngDeg=df_mean_pred['lngDeg'])
 sub
 # sub.to_csv('../../data/submission/kalman_s2g_monPAOnothing_mp_pm.csv', index=False)
 # sub.to_csv('../../data/submission/imu_many_lat_lng_deg_monPAOnothing_mp_pm.csv', index=False)
-sub.to_csv('../../data/submission/imu_many_lat_lng_deg_kalman_mp.csv', index=False)
+sub.to_csv('../../data/interim/imu_many_lat_lng_deg_lgbm_kalman_mp.csv', index=False)

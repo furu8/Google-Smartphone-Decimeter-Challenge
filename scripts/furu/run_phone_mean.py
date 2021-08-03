@@ -81,13 +81,15 @@ def mean_with_other_phones(df):
 # df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_moving_or_not_PAOnothing.csv')
 # df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_mp_moving_or_not_kai_PAOnothing.csv')
 # df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_mp_moving_or_not_kai_PAOnothing.csv')
-df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_s2gt_SJC_mean_predict_moving_or_not_kai_PAOnothing.csv')
+# df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman_s2gt_SJC_mean_predict_moving_or_not_kai_PAOnothing.csv')
+df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_lgbm_kalman_mp_moving_or_not_kai_PAOnothing.csv')
 df = pd.concat([df, df['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
 df
 
 # %%
 # phone_mean
-df_phone_mean = mean_with_other_phones(df)
+new_df = df.copy()
+df_phone_mean = mean_with_other_phones(new_df)
 df_phone_mean
 
 # %%
@@ -98,8 +100,8 @@ def visualize_trafic(df, center, zoom=9):
                             lat="latDeg",
                             lon="lngDeg",
                             #Here, plotly detects color of series
-                            color="phoneName",
-                            labels="phoneName",
+                            # color="phoneName",
+                            # labels="phoneName",
                             zoom=zoom,
                             center=center,
                             height=600,
@@ -126,10 +128,10 @@ cns_dict = {
         'MTV': [
                 # '2021-03-16-US-MTV-2',
                 # '2021-04-08-US-MTV-1', 
-                # '2021-04-21-US-MTV-1', 
-                # '2021-04-28-US-MTV-2',  # Uターン？
+                '2021-04-21-US-MTV-1', 
+                '2021-04-28-US-MTV-2',  # Uターン？
                 '2021-04-29-US-MTV-2'
-                # '2021-03-16-US-RWC-2'
+                '2021-03-16-US-RWC-2'
             ],
         # 'SVL': ['2021-04-26-US-SVL-2'],
     }
@@ -158,4 +160,4 @@ sub
 # sub.to_csv('../../data/submission/imu_many_lat_lng_deg_monPAOnothing_mp_pm.csv', index=False)
 # sub.to_csv('../../data/submission/imu_many_lat_lng_deg_kalman_monPAOnothing_mp_pm.csv', index=False)
 # sub.to_csv('../../data/submission/imu_many_lat_lng_deg_kalman_mp_monPAOnothing_pm.csv', index=False)
-sub.to_csv('../../data/submission/imu_many_lat_lng_deg_kalman_s2gt_SJC_mp_monPAOnothing_pm.csv', index=False)
+sub.to_csv('../../data/submission/imu_many_lat_lng_deg_lgbm_kalman_mp_monPAOnothing_pm.csv', index=False)
