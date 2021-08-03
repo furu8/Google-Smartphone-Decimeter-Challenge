@@ -18,14 +18,10 @@ sub_df["latDeg"] = sub_df_lat.mean(axis='columns')
 sub_df["lngDeg"] = sub_df_lng.mean(axis='columns')
 display(sub_df)
 # %%
-geometric_mean = lambda x: np.prod(np.array(x[1:])) ** (1/len(np.array(x[1:])))
-for i in sub_df_lng.itertuples():
-    print(np.prod(i[1:]))
-    print(len(i))
-    break
-# sub_df["latDeg"] = [geometric_mean(i) for i in sub_df_lat.itertuples()]
-# sub_df["lngDeg"] = [geometric_mean(i) for i in sub_df_lng.itertuples()]
-# display(sub_df)
+geometric_mean = lambda x: np.abs(np.prod(np.array(x[1:]))) ** (1/len(np.array(x[1:])))
+sub_df["latDeg"] = [geometric_mean(i) for i in sub_df_lat.itertuples()]
+sub_df["lngDeg"] = [geometric_mean(i) if geometric_mean(i) < 0 else geometric_mean(i) * -1 for i in sub_df_lng.itertuples()]
+display(sub_df)
 # %%
 harmonic_mean = lambda x : np.reciprocal(np.array(x[1:]))
 sub_df["latDeg"] = [np.reciprocal(np.mean(harmonic_mean(i))) for i in sub_df_lat.itertuples()]
@@ -36,6 +32,18 @@ n = 1.2
 npow_mean = lambda x, n: np.array(x[1:]) ** n
 sub_df["latDeg"] = [np.mean(npow_mean(i, n)) ** (1/n) for i in sub_df_lat.itertuples()]
 sub_df["lngDeg"] = [np.mean(npow_mean(i, n)) ** (1/n) for i in sub_df_lng.itertuples()]
+display(sub_df)
+# %%
+weights = []
+for idx, path in enumerate(ensemble_df, 1):
+    submission = path.split('\\')[1]
+    weights.append(float(input(f'{submission}の重みを入力してください {idx}/{len(ensemble_df)}')))
+print(ensemble_df)
+print(weights)
+# %%
+weighted_mean = lambda x: np.average(x[1:], weights=weights)
+sub_df["latDeg"] = [weighted_mean(i) for i in sub_df_lat.itertuples()]
+sub_df["lngDeg"] = [weighted_mean(i) for i in sub_df_lng.itertuples()]
 display(sub_df)
 # %%
 display(sample_df)
@@ -59,5 +67,5 @@ fig.show()
 # %%
 sub_df["latDeg"].plot()
 # %%
-sub_df.to_csv('./submisson21.csv', index=False)
+sub_df.to_csv('./submisson22.csv', index=False)
 # %%
