@@ -17,7 +17,6 @@ from tqdm import tqdm
 import glob as gb
 import simdkalman
 import re
-warnings.filterwarnings("ignore", category=Warning)
 
 # 最大表示行数を設定
 pd.set_option('display.max_rows', 500)
