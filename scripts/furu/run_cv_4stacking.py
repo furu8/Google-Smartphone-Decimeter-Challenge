@@ -296,28 +296,28 @@ cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 # print(test_df.columns)
 
 # ここをいじる
-# run_name = 'lgbm' # 名前変えてね
+run_name = 'lgbm' # 名前変えてね
+params = {
+    # 'max_depth': 5,
+    # 'num_leaves': 32,
+    'metric':'mse',
+    'objective':'regression',
+    'seed':2021,
+    'boosting_type':'gbdt',
+    'early_stopping_rounds':10,
+    'subsample':0.7,
+    'feature_fraction':0.7,
+    'bagging_fraction': 0.7,
+    'reg_lambda': 10
+}
+
+# run_name = 'rfm'
 # params = {
 #     'max_depth': 10,
 #     'num_leaves': 1024,
-#     'metric':'mse',
-#     'objective':'regression',
-#     'seed':2021,
-#     'boosting_type':'gbdt',
-#     'early_stopping_rounds':10,
-#     'subsample':0.7,
-#     'feature_fraction':0.7,
-#     'bagging_fraction': 0.7,
-#     'reg_lambda': 10
+#     'n_estimators': 100,
+#     'random_state': 2021,
 # }
-
-run_name = 'rfm'
-params = {
-    'max_depth': 10,
-    'num_leaves': 1024,
-    'n_estimators': 100,
-    'random_state': 2021,
-}
 
 x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
 x_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_many_lat_lng_deg.csv')
@@ -327,14 +327,14 @@ z_trn_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
 z_tst_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
 for drived_id in cns_dict.keys():
-    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
-    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
+    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
+    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
     stacking_dfs = pd.concat([stacking_dfs, stacking_df], axis=0) 
 
 display(stacking_dfs)
 
 # lgbm
-"""maxdepth:-1, n_estimators:100
+"""maxdepth:-1, numleaves:31
 SJC
 dist_50: 3.532140410316554
 dist_95: 11.024273029511706
@@ -348,21 +348,35 @@ avg_dist_50_95: 5.2866705825980995
 avg_dist: 3.1502449611507966
 """
 
-"""maxdepth:10, n_estimators:100
+"""maxdepth:10, numleaves:31
 SJC
-dist_50: 3.576438316207736
-dist_95: 11.059847026820272
-avg_dist_50_95: 7.318142671514003
-avg_dist: 4.523908368641834
+dist_50: 3.0421563971195695
+dist_95: 10.051035585758004
+avg_dist_50_95: 6.546595991438787
+avg_dist: 3.978379955709691
 
 MTV
-dist_50: 2.5111875475969567
-dist_95: 8.060663313276235
-avg_dist_50_95: 5.2859254304365955
-avg_dist: 3.1479418943562054
+dist_50: 2.4047209625444506
+dist_95: 7.959900604626116
+avg_dist_50_95: 5.182310783585283
+avg_dist: 3.0494892084822216
 """
 
-"""maxdepth:30, n_estimators:100
+"""maxdepth:10, numleaves:1024,
+SJC
+dist_50: 3.0421563971195695
+dist_95: 10.051035585758004
+avg_dist_50_95: 6.546595991438787
+avg_dist: 3.978379955709691
+
+MTV
+dist_50: 2.4047209625444506
+dist_95: 7.959900604626116
+avg_dist_50_95: 5.182310783585283
+avg_dist: 3.0494892084822216
+"""
+
+"""maxdepth:30, numleaves:31
 SJC
 dist_50: 3.532140410316554
 dist_95: 11.024273029511704
@@ -376,20 +390,36 @@ avg_dist_50_95: 5.286670582336028
 avg_dist: 3.150244961153496
 """
 
-"""max_depth:5, num_leaves:31, n_estimators:100
-dist_50: 4.084558018493
-dist_95: 12.9402931036267
-avg_dist_50_95: 8.51242556105985
-avg_dist: 5.211693035169141
+"""maxdepth:5, numleaves:32
+SJC
+dist_50: 4.080893012128983
+dist_95: 12.953706389535682
+avg_dist_50_95: 8.517299700832332
+avg_dist: 5.211353360160388
 
-dist_50: 2.584113011551043
-dist_95: 8.161943133386611
-avg_dist_50_95: 5.373028072468827
-avg_dist: 3.239827717720705
+MTV
+dist_50: 2.5794027589686497
+dist_95: 8.181715078197291
+avg_dist_50_95: 5.38055891858297
+avg_dist: 3.2407387395622953
+"""
+
+"""maxdepth:30, numleaves:1024
+SJC
+dist_50: 2.811697675224356
+dist_95: 9.569232835779214
+avg_dist_50_95: 6.190465255501785
+avg_dist: 3.7454211600932243
+
+MTV
+dist_50: 2.3272145021106496
+dist_95: 7.877149358645448
+avg_dist_50_95: 5.102181930378048
+avg_dist: 2.998874671142002
 """
 
 # rfm
-"""max_depth:30 n_estimators:100
+"""max_depth:3
 SJC
 dist_50: 2.7086529980728122
 dist_95: 11.325458192655608
@@ -403,7 +433,7 @@ avg_dist_50_95: 3.0005899912356844
 avg_dist: 1.7378300969927243
 """
 
-"""max_depth:10, n_estimators:100
+"""max_depth:10
 SJC
 dist_50: 3.166285673774718
 dist_95: 12.382431128206115
@@ -418,5 +448,5 @@ avg_dist: 1.8870523784103994
 """
 # %%
 # save
-stacking_dfs.to_csv(f'../../data/interim/stacking/imu_{run_name}_maxdepth30_n100.csv', index=False)
+stacking_dfs.to_csv(f'../../data/interim/stacking/imu_{run_name}_maxdepth-1_numleaves31.csv', index=False)
 # %%
