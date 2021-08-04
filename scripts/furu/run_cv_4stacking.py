@@ -298,6 +298,8 @@ cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 # ここをいじる
 # run_name = 'lgbm' # 名前変えてね
 # params = {
+#     'max_depth': 10,
+#     'num_leaves': 1024,
 #     'metric':'mse',
 #     'objective':'regression',
 #     'seed':2021,
@@ -311,8 +313,9 @@ cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 
 run_name = 'rfm'
 params = {
-    'max_depth': 5,
-    'n_estimators': 20,
+    'max_depth': 10,
+    'num_leaves': 1024,
+    'n_estimators': 100,
     'random_state': 2021,
 }
 
@@ -324,13 +327,14 @@ z_trn_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
 z_tst_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
 for drived_id in cns_dict.keys():
-    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
-    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
+    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
+    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
     stacking_dfs = pd.concat([stacking_dfs, stacking_df], axis=0) 
 
 display(stacking_dfs)
 
-"""lgbm <- run_name
+# lgbm
+"""maxdepth:-1, n_estimators:100
 SJC
 dist_50: 3.532140410316554
 dist_95: 11.024273029511706
@@ -344,13 +348,75 @@ avg_dist_50_95: 5.2866705825980995
 avg_dist: 3.1502449611507966
 """
 
-"""
-dist_50: 81.15676556283807
-dist_95: 179.7289184927825
-avg_dist_50_95: 130.4428420278103
-avg_dist: 92.83598653553565
+"""maxdepth:10, n_estimators:100
+SJC
+dist_50: 3.576438316207736
+dist_95: 11.059847026820272
+avg_dist_50_95: 7.318142671514003
+avg_dist: 4.523908368641834
+
+MTV
+dist_50: 2.5111875475969567
+dist_95: 8.060663313276235
+avg_dist_50_95: 5.2859254304365955
+avg_dist: 3.1479418943562054
 """
 
+"""maxdepth:30, n_estimators:100
+SJC
+dist_50: 3.532140410316554
+dist_95: 11.024273029511704
+avg_dist_50_95: 7.278206719914129
+avg_dist: 4.503148645236647
+
+MTV
+dist_50: 2.5158099830554246
+dist_95: 8.057531181616632
+avg_dist_50_95: 5.286670582336028
+avg_dist: 3.150244961153496
+"""
+
+"""max_depth:5, num_leaves:31, n_estimators:100
+dist_50: 4.084558018493
+dist_95: 12.9402931036267
+avg_dist_50_95: 8.51242556105985
+avg_dist: 5.211693035169141
+
+dist_50: 2.584113011551043
+dist_95: 8.161943133386611
+avg_dist_50_95: 5.373028072468827
+avg_dist: 3.239827717720705
+"""
+
+# rfm
+"""max_depth:30 n_estimators:100
+SJC
+dist_50: 2.7086529980728122
+dist_95: 11.325458192655608
+avg_dist_50_95: 7.01705559536421
+avg_dist: 3.953079105888895
+
+MTV
+dist_50: 1.313743888356429
+dist_95: 4.68743609411494
+avg_dist_50_95: 3.0005899912356844
+avg_dist: 1.7378300969927243
+"""
+
+"""max_depth:10, n_estimators:100
+SJC
+dist_50: 3.166285673774718
+dist_95: 12.382431128206115
+avg_dist_50_95: 7.774358400990416
+avg_dist: 4.482838921352679
+
+MTV
+dist_50: 1.446185834653453
+dist_95: 4.8529391108088245
+avg_dist_50_95: 3.1495624727311387
+avg_dist: 1.8870523784103994
+"""
 # %%
 # save
-stacking_dfs.to_csv(f'../../data/interim/stacking/imu_{run_name}.csv', index=False)
+stacking_dfs.to_csv(f'../../data/interim/stacking/imu_{run_name}_maxdepth30_n100.csv', index=False)
+# %%
