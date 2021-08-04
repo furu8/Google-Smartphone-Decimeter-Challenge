@@ -327,8 +327,8 @@ z_trn_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
 z_tst_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
 for drived_id in cns_dict.keys():
-    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
-    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
+    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
+    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
     stacking_dfs = pd.concat([stacking_dfs, stacking_df], axis=0) 
 
 display(stacking_dfs)
