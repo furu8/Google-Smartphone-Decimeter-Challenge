@@ -6,13 +6,15 @@ import glob
 sub_df_lat = pd.DataFrame()
 sub_df_lng = pd.DataFrame()
 sub_df = pd.read_csv('../../data/submission/sample_submission.csv')
-sample_df = pd.read_csv('../../data/processed/ensemble/imu_many_lat_lng_deg_kalman_mean_predict_phone_mean_moving_or_not_PAOnothing.csv')
+#sample_df = pd.read_csv('../../data/processed/ensemble/imu_many_lat_lng_deg_kalman_mean_predict_phone_mean_moving_or_not_PAOnothing.csv')
 ensemble_path = "../../data/processed/ensemble/*"
 ensemble_df = glob.glob(ensemble_path)
 print(ensemble_df)
 for path in ensemble_df:
     sub_df_lat = pd.concat([sub_df_lat, pd.read_csv(path).loc[:, ['latDeg']]], axis=1)
     sub_df_lng = pd.concat([sub_df_lng, pd.read_csv(path).loc[:, ['lngDeg']]], axis=1)
+# %%
+len(ensemble_df)
 # %%
 sub_df["latDeg"] = sub_df_lat.mean(axis='columns')
 sub_df["lngDeg"] = sub_df_lng.mean(axis='columns')
@@ -46,7 +48,7 @@ sub_df["latDeg"] = [weighted_mean(i) for i in sub_df_lat.itertuples()]
 sub_df["lngDeg"] = [weighted_mean(i) for i in sub_df_lng.itertuples()]
 display(sub_df)
 # %%
-display(sample_df)
+#display(sample_df)
 # %%
 import plotly.express as px
 # %%
@@ -65,7 +67,9 @@ fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 fig.update_layout(title_text="GPS trafic")
 fig.show()
 # %%
-sub_df["latDeg"].plot()
+sub_df["lngDeg"].plot()
 # %%
-sub_df.to_csv('./submisson22.csv', index=False)
+sub_df.to_csv('./weighted_mean_lower_4_2_and_non_imu.csv', index=False)
+# %%
+best_df = pd.read_csv('./weighted_mean_lower_4_2_and_non_imu.csv')
 # %%

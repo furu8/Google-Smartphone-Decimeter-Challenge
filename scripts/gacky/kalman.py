@@ -1,10 +1,19 @@
 # %%
-from datetime import time
+#from datetime import time
+import time
 import pandas as pd
 import numpy as np
+import glob
 # %%
 df_test = pd.read_csv("../../data/raw/baseline_locations_test.csv")
 df_train = pd.read_csv("../../data/raw/baseline_locations_train.csv")
+df_test
+# %%
+df = pd.read_csv("../../data/interim/imu_many_lat_lng_deg_rfm.csv")
+df
+# %%
+df = pd.concat([df, df['phone'].str.split('_', expand=True).rename(columns={0: 'collectionName', 1: 'phoneName'})], axis=1)
+df
 # %%
 df['dist_pre'] = 0
 df['dist_pro'] = 0
@@ -67,11 +76,11 @@ def apply_kf_smoothing(df, kf_=kf):
         df.loc[cond, 'lngDeg'] = smoothed.states.mean[0, :, 1]
     return df
 # %%
-df_sub = pd.read_csv('../../data/submission/sample_submission.csv')
+df_sub = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_kalman.csv')
 # %%
 kf_smoothed_baseline = apply_kf_smoothing(df)
 # %%
-kf_smoothed_baseline.to_csv('./kf_kf.csv', index=False)
+kf_smoothed_baseline.to_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman.csv', index=False)
 # %%
 kf_kf_smoothed_baseline = pd.read_csv('./kf_kf.csv')
 # %%
@@ -86,7 +95,33 @@ import geopandas as gpd
 df_collections = kf_smoothed_baseline['collectionName'].unique()
 df_collections
 # %%
-kf_smoothed_baseline = pd.read_csv('../../data/interim/kalman_aga.csv')
+kf_smoothed_baseline = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_lgbm_kalman.csv')
+# %%
+kf_smoothed_baseline
+# %%
+df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_lgbm.csv')
+# %%
+sub_df = pd.concat([sub_df, sub_df['phone'].str.split('_', expand=True).rename(columns={0: 'collectionName', 1: 'phoneName'})], axis=1)
+sub_df
+# %%
+kf_smoothed_baseline = pd.concat([kf_smoothed_baseline, kf_smoothed_baseline['phone'].str.split('_', expand=True).rename(columns={0: 'collectionName', 1: 'phoneName'})], axis=1)
+kf_smoothed_baseline
+# %%
+gt_path = glob.glob('../../data/raw/train/2021-04-22-US-SJC-1/*/ground_truth.csv')
+gt_path.extend(glob.glob('../../data/raw/train/2021-04-28-US-SJC-1/*/ground_truth.csv'))
+gt_path.extend(glob.glob('../../data/raw/train/2021-04-29-US-SJC-2/*/ground_truth.csv'))
+gt_path
+# %%
+gt = pd.read_csv(gt_path[0])
+for path in gt_path[1:]:
+    gt = pd.concat([gt, pd.read_csv(path)], ignore_index=True)
+gt
+# %%
+gt
+# %%
+calc_dist = lambda a, b: grid_points.apply(calc_haversine_sub, lat2=a, lon2=b, axis=1)
+# %%
+tmp_df = pd.DataFrame()
 # %%
 %%time
 for i in ["2021-04-22-US-SJC-2", "2021-04-29-US-SJC-3"]:#df_collections:#df_collections:
@@ -134,16 +169,19 @@ for i in ["2021-04-22-US-SJC-2", "2021-04-29-US-SJC-3"]:#df_collections:#df_coll
     line_points = line_points.reset_index().rename(columns={0:"geometry"})
     line_points["lngDeg"] = line_points["geometry"].x
     line_points["latDeg"] = line_points["geometry"].y
-    dist_df = pd.DataFrame(list(map(lambda x: calc_dist(x[4], x[5]), target_df.itertuples())))
-    line_points_calc = pd.concat([line_points, dist_df.T], axis=1)
+    grid_points = line_points.loc[:, ['lngDeg', 'latDeg']]
+    grid_points = pd.concat([grid_points, gt.loc[:, ['lngDeg', 'latDeg']]], ignore_index=True)
+    display(len(grid_points))
+    dist_df = pd.DataFrame(list(map(lambda x: calc_dist(x[3], x[4]), target_df.itertuples())))
+    line_points_calc = pd.concat([grid_points, dist_df.T], axis=1)
     line_points_calc = line_points_calc.set_index(["lngDeg", "latDeg"])
-    target_df["calc_point"] = line_points_calc.iloc[:,2:].idxmin()
-    target_df["min_dist"] = line_points_calc.iloc[:, 2:].min()
+    target_df["calc_point"] = line_points_calc.iloc[:,:].idxmin()
+    target_df["min_dist"] = line_points_calc.iloc[:,:].min()
     try:
-        tmpo_df = pd.concat([tmpo_df, target_df], ignore_index=True)
+        tmp_df = pd.concat([tmp_df, target_df], ignore_index=True)
     except:
-        tmpo_df = target_df.copy(deep=True)
-    display(len(line_points))
+        tmp_df = target_df.copy(deep=True)
+    display(len(tmp_df))
 # %%
 df = pd.read_csv('../../data/raw/baseline_locations_test.csv')
 # %%
@@ -300,29 +338,44 @@ df_sub.to_csv('./submission9.csv', index=False)
 # %%
 import plotly.express as px
 # %%
+!pip install -U kaleido
+# %%
 df_train_phone = df_train['phone'].unique()
 df_test_phone = df_test['phone'].unique()
 # %%
-df_train_phone
+df_sub_phone = df_sub['phone'].unique()
+df_sub_phone
 # %%
 df_test_phone
 # %%
-# for phone in df_train_phone:
-fig = px.scatter_mapbox(gt, #df_test[df_test['phone'] == '2020-08-03-US-MTV-2_Pixel4'], #line_points, #df[(df["collectionName"] == "2021-04-26-US-SVL-2")], #line_points, #kf_kf_smoothed_baseline[kf_kf_smoothed_baseline["phone"] == "2021-04-22-US-SJC-2_SamsungS20Ultra"],
+df_sub
+# %%
+gt_raw_path = glob.glob('../../data/raw/train/*/*/ground_truth.csv')
+# gt_path = []
+# for i in gt_raw_path:
+#     gt_path.append(i.split('\\')[1] + '_' + i.split('\\')[2])
+# print(gt_path)
+# %%
+# for phone in df_sub_phone:
+    # print(phone)
+    #cn = gt_path.split('\\')[1]
+    #pn = gt_path.split('\\')[2]
+    #df = pd.read_csv(gt_path)
+fig = px.scatter_mapbox(submit_df, #df_sub[df_sub['phone'] == phone], #df_test[df_test['phone'] == '2020-08-03-US-MTV-2_Pixel4'], #line_points, #df[(df["collectionName"] == "2021-04-26-US-SVL-2")], #line_points, #kf_kf_smoothed_baseline[kf_kf_smoothed_baseline["phone"] == "2021-04-22-US-SJC-2_SamsungS20Ultra"],
 
                     # Here, plotly gets, (x,y) coordinates
                     lat="latDeg",
                     lon="lngDeg",
 
-                    zoom=15,
-                    center={"lat":37.33351, "lon":-121.8906},
+                    zoom=8.5,
+                    center={"lat":37.52856, "lon":-122.225},
                     height=600,
                     width=800)
 fig.update_layout(mapbox_style='stamen-terrain')
 fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 fig.update_layout(title_text="GPS trafic")
 fig.show()
-#fig.write_image('./hokan.png')
+    # fig.write_image(f'../../data/interim/route/test/sample_{phone}.png')
 # %%
 kf_kf_smoothed_baseline[kf_kf_smoothed_baseline["collectionName"] == "2021-04-22-US-SJC-2"]["phoneName"].unique()
 # %%
@@ -357,7 +410,9 @@ all_df = pd.concat([all_df, target_df], ignore_index=True)
 # %%
 all_df.describe()
 # %%
-tmpo_df = pd.read_csv('../../data/interim/kalman_mean_predict_snap.csv')
+tmp_df = pd.read_csv('../../data/interim/imu_rfm_s2gt_MTV_grid_point.csv')
+# %%
+tmp_df.to_csv('../../data/interim/imu_rfm_s2gt_MTV_grid_point.csv')
 # %%
 sub_df = pd.DataFrame(list(map(lambda x:x[1], tmp_df["calc_point"])))
 sub_df.describe()
@@ -371,6 +426,8 @@ tmp_df["calc_lngDeg"] = sub_df
 # %%
 tmp_df["min_dist"].plot()
 # %%
+tmp_df[(tmp_df["collectionName"] == "2021-04-22-US-SJC-2") | (tmp_df["collectionName"] == "2021-04-29-US-SJC-3")]["min_dist"].hist(bins=50)
+# %%
 def calc_haversine_sub(row, lat2, lon2):
     RADIUS = 6367000
     lat1, lon1, lat2, lon2 = map(np.radians, [row["latDeg"], row["lngDeg"], lat2, lon2])
@@ -380,18 +437,22 @@ def calc_haversine_sub(row, lat2, lon2):
     dist = 2 * RADIUS *np.arcsin(a ** 0.5)
     return dist
 # %%
+#tmp_df[(tmp_df["collectionName"] == "2021-04-22-US-SJC-2") | (tmp_df["collectionName"] == "2021-04-29-US-SJC-3")]
 tmp_df
 # %%
-sub_df = tmp_df.iloc[:, :3]
+snap.to_csv('../../data/interim/s2gt_SJC_grid_point.csv', index=False)
 # %%
-sub_df["latDeg"] = pd.DataFrame(list(map(lambda x: x[10] if x[9] > 10 else x[4], tmp_df.itertuples())))
-sub_df["lngDeg"] = pd.DataFrame(list(map(lambda x: x[11] if x[9] > 10 else x[5], tmp_df.itertuples())))
+sub_df = tmp_df.loc[:, ["phone", "millisSinceGpsEpoch", "latDeg", "lngDeg", "collectionName", "phoneName"]]
+sub_df
+# %%
+sub_df["latDeg"] = pd.DataFrame(list(map(lambda x: x[16] if x[15] > 4 else x[3], tmp_df.itertuples())))
+sub_df["lngDeg"] = pd.DataFrame(list(map(lambda x: x[17] if x[15] > 4 else x[4], tmp_df.itertuples())))
 # %%
 sub_df = pd.DataFrame(columns=['latDeg', 'lngDeg'])
 # %%
 sub_df = sub_df.rename({0:"latDeg"}, axis=1)
 # %%
-sub_df
+sub_df["lngDeg"].describe()
 # %%
 all_df.to_csv('./kf_kf_grid_df.csv', index=False)
 # %%
@@ -446,11 +507,17 @@ sample_df.to_csv('./kf_kf_grid_sample.csv', index=False)
 # %%
 tmpo_df["min_dist"].describe()
 # %%
-submit_df = pd.read_csv('../../data/interim/kalman_aga.csv')
-# %%
+submit_df = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman.csv')
 submit_df
 # %%
-tmpo_df
+submit_df = pd.read_csv('../../data/interim/kalman_aga.csv')
+submit_df
+# %%
+submit_df["latDeg"] = sample_submission["latDeg"]
+submit_df["lngDeg"] = sample_submission["lngDeg"]
+submit_df
+# %%
+sub_df[sub_df["phone"] == "2021-04-29-US-SJC-3_SamsungS20Ultra"]
 # %%
 sub_df_20210422_US_SJC_2 = sub_df.copy(deep=True)
 # %%
@@ -459,6 +526,9 @@ sub_df_20210422_US_SJC_2.to_csv("grid_20210422_US_SJC_2_Samsung.csv", index=Fals
 print(pd.merge(submit_df, sub_df_20210422_US_SJC_2, on=['collectionName', 'phoneName', 'millisSinceGpsEpoch'], how='left'))
 # %%
 print(pd.merge(submit_df, sub_df, on=['collectionName', 'phoneName', 'millisSinceGpsEpoch'], how='left'))
+# %%
+print(len(submit_df.iloc[submit_df[submit_df['phone'] == "2021-04-29-US-SJC-3_SamsungS20Ultra"].index[:],3]))
+print(len(sub_df[(sub_df["collectionName"] == "2021-04-29-US-SJC-3") & (sub_df["phoneName"] == "SamsungS20Ultra")]["latDeg"].values))
 # %%
 submit_df.iloc[submit_df[submit_df['phone'] == "2021-04-29-US-SJC-3_SamsungS20Ultra"].index[:],3] = sub_df[(sub_df["collectionName"] == "2021-04-29-US-SJC-3") & (sub_df["phoneName"] == "SamsungS20Ultra")]["latDeg"].values
 submit_df.iloc[submit_df[submit_df['phone'] == "2021-04-29-US-SJC-3_SamsungS20Ultra"].index[:],4] = sub_df[(sub_df["collectionName"] == "2021-04-29-US-SJC-3") & (sub_df["phoneName"] == "SamsungS20Ultra")]["lngDeg"].values
@@ -469,5 +539,14 @@ submit_df.iloc[submit_df[submit_df['phone'] == "2021-04-29-US-SJC-3_Pixel4"].ind
 submit_df.iloc[submit_df[submit_df['phone'] == "2021-04-22-US-SJC-2_SamsungS20Ultra"].index[:],3] = sub_df[(sub_df["collectionName"] == "2021-04-22-US-SJC-2") & (sub_df["phoneName"] == "SamsungS20Ultra")]["latDeg"].values
 submit_df.iloc[submit_df[submit_df['phone'] == "2021-04-22-US-SJC-2_SamsungS20Ultra"].index[:],4] = sub_df[(sub_df["collectionName"] == "2021-04-22-US-SJC-2") & (sub_df["phoneName"] == "SamsungS20Ultra")]["lngDeg"].values
 # %%
-submit_df.to_csv('../../data/interim/kalman_aga_s2g_drive.csv', index=False)
+phone_list = sub_df["phone"].unique()
+phone_list
+# %%
+for phone in phone_list:
+    submit_df.iloc[submit_df[submit_df['phone'] == phone].index[:],2] = sub_df[(sub_df["collectionName"] == phone.split('_')[0]) & (sub_df["phoneName"] == phone.split('_')[1])]["latDeg"].values
+    submit_df.iloc[submit_df[submit_df['phone'] == phone].index[:],3] = sub_df[(sub_df["collectionName"] == phone.split('_')[0]) & (sub_df["phoneName"] == phone.split('_')[1])]["lngDeg"].values
+# %%
+submit_df
+# %%
+submit_df.iloc[:, :6].to_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman_s2gt_SJC_thres4.csv', index=False)
 # %%

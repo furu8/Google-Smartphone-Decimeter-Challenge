@@ -161,7 +161,7 @@ def calc_mean_pred(df, lerp_df):
     mean_pred_df = mean_pred_df.merge(mean_pred_result[['collectionName', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']], on=['collectionName', 'millisSinceGpsEpoch'], how='left')
     return mean_pred_df
 # %%
-test_kf = pd.read_csv('../../data/interim/kalman_s2gt_SJC.csv')
+test_kf = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman_s2gt_SJC_thres4.csv')
 test_kf
 # %%
 train_lerp = make_lerp_data(train_ro_kf)
@@ -219,7 +219,7 @@ base_test["heightAboveWgs84EllipsoidM"] = test_mean_pred["heightAboveWgs84Ellips
 base_test["phone"] = test_mean_pred["phone"]
 base_test#test_mean_pred
 # %%
-test_mean_pred.to_csv('../../data/interim/kalman_s2gt_SJC_mean_predict.csv', index=False)
+test_mean_pred.to_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman_s2gt_SJC_thres4_mean_predict.csv', index=False)
 # %%
 import plotly.express as px
 # %%

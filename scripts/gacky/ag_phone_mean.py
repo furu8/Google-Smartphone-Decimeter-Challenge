@@ -93,14 +93,18 @@ smoothed_baseline = apply_gauss_smoothing(train_base, {'sz_1' : 0.85, 'sz_2' : 5
 # %%
 smoothed_baseline = mean_with_other_phones(smoothed_baseline)
 # %%
-smoothed_baseline.to_csv('../../data/interim/kalman_s2gt_SJC_mean_predict_phone_mean.csv', index=False)
+smoothed_baseline.to_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman_s2gt_SJC_thres4_mean_predict_moving_or_not_PAOnothing_phone_mean.csv', index=False)
 # %%
-smoothed_baseline = pd.read_csv('../../data/interim/kalman_s2gt_SJC_mean_predict.csv')
+smoothed_baseline = pd.read_csv('../../data/interim/imu_many_lat_lng_deg_rfm_kalman_s2gt_SJC_thres4_mean_predict_moving_or_not_PAOnothing.csv')
+# %%
+smoothed_baseline = pd.concat([smoothed_baseline, smoothed_baseline['phone'].str.split('_', expand=True).rename(columns={0: 'collectionName', 1: 'phoneName'})], axis=1)
+smoothed_baseline
 # %%
 smoothed_baseline.isnull().sum()
 # %%
-smoothed_baseline
+smoothed_baseline["lngDeg"].plot()
 # %%
 sub = sub.assign( latDeg=smoothed_baseline.latDeg, lngDeg=smoothed_baseline.lngDeg )
-sub.to_csv('./submission19.csv', index=False)
+sub.to_csv('./imu_many_lat_lng_deg_rfm_kalman_s2gt_SJC_thres4_mean_predict_mon_kai_phone_mean.csv', index=False)
 # %%
+sub["lngDeg"].plot()
