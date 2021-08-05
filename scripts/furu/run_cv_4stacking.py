@@ -16,7 +16,7 @@ pd.set_option('display.max_rows', 500)
 # 最大表示列数の指定
 pd.set_option('display.max_columns', 500)
 
-
+# %%
 def extract_SJC(train_df, test_df):
     # extract
     train_df = train_df[
@@ -296,28 +296,27 @@ cn2pn_tst_df = bl_tst_df[['collectionName', 'phoneName']].drop_duplicates()
 # print(test_df.columns)
 
 # ここをいじる
-run_name = 'lgbm' # 名前変えてね
-params = {
-    # 'max_depth': 5,
-    # 'num_leaves': 32,
-    'metric':'mse',
-    'objective':'regression',
-    'seed':2021,
-    'boosting_type':'gbdt',
-    'early_stopping_rounds':10,
-    'subsample':0.7,
-    'feature_fraction':0.7,
-    'bagging_fraction': 0.7,
-    'reg_lambda': 10
-}
-
-# run_name = 'rfm'
+# run_name = 'lgbm' # 名前変えてね
 # params = {
-#     'max_depth': 10,
-#     'num_leaves': 1024,
-#     'n_estimators': 100,
-#     'random_state': 2021,
+#     # 'max_depth': 5,
+#     # 'num_leaves': 32,
+#     'metric':'mse',
+#     'objective':'regression',
+#     'seed':2021,
+#     'boosting_type':'gbdt',
+#     'early_stopping_rounds':10,
+#     'subsample':0.7,
+#     'feature_fraction':0.7,
+#     'bagging_fraction': 0.7,
+#     'reg_lambda': 10
 # }
+
+run_name = 'rfm'
+params = {
+    'max_depth': 30,
+    'n_estimators': 100,
+    'random_state': 2021,
+}
 
 x_trn_df = pd.read_csv(f'../../data/processed/train/imu_x_many_lat_lng_deg.csv')
 x_tst_df = pd.read_csv(f'../../data/processed/test/imu_x_many_lat_lng_deg.csv')
@@ -327,9 +326,26 @@ z_trn_df = pd.read_csv(f'../../data/processed/train/imu_z_many_lat_lng_deg.csv')
 z_tst_df = pd.read_csv(f'../../data/processed/test/imu_z_many_lat_lng_deg.csv')
 
 for drived_id in cns_dict.keys():
-    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
-    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
+    # test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelLGB, params)
+    test_pred_df, stacking_df = run_learing(drived_id, x_trn_df, x_tst_df, y_trn_df, y_tst_df, z_trn_df, z_tst_df, run_name, ModelRF, params)
     stacking_dfs = pd.concat([stacking_dfs, stacking_df], axis=0) 
+
+    for cn in cns_dict[drived_id]:
+        pns = cn2pn_tst_df.loc[cn2pn_tst_df['collectionName'] == cn, 'phoneName'].values
+        for pn in pns:
+            print(len(bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3]))
+            print(len(test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg']))
+            # display(bl_tst_df[bl_tst_df['phone']==cn + '_' + pn])
+            # display(bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:])
+            bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 3] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'latDeg'].values
+            bl_tst_df.iloc[bl_tst_df[bl_tst_df['phone']==cn + '_' + pn].index[window_size-1:], 4] = test_pred_df.loc[(test_pred_df['collectionName']==cn) & (test_pred_df['phoneName']==pn), 'lngDeg'].values
+
+# save
+output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
+display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
+
+# %%
+output.to_csv(f'../../data/interim/imu_many_lat_lng_deg_rfm.csv', index=False)
 
 display(stacking_dfs)
 
@@ -463,4 +479,34 @@ avg_dist: 14.189660920375292
 # %%
 # save
 stacking_dfs.to_csv(f'../../data/interim/stacking/imu_{run_name}_maxdepth-1_numleaves31.csv', index=False)
+# %%
+sample_df = pd.read_csv('../../data/submission/sample_submission.csv')
+sample_df = pd.concat([sample_df, sample_df['phone'].str.split('_', expand=True).rename(columns={0:'collectionName', 1:'phoneName'})], axis=1)
+sample_df = sample_df[sample_df['collectionName'].isin([
+                                                '2021-04-21-US-MTV-1', 
+                                                '2021-04-28-US-MTV-2', 
+                                                '2021-04-29-US-MTV-2',
+                                                '2021-03-16-US-RWC-2', 
+                                                '2021-04-22-US-SJC-2', 
+                                                '2021-04-29-US-SJC-3'])]
+
+base_test_df = pd.read_csv('../../data/interim/stacking/imu_rfm_maxdepth30_n100.csv')
+base_test_df = base_test_df[base_test_df['collectionName'].isin([
+                                                '2021-04-21-US-MTV-1', 
+                                                '2021-04-28-US-MTV-2', 
+                                                '2021-04-29-US-MTV-2',
+                                                '2021-03-16-US-RWC-2', 
+                                                '2021-04-22-US-SJC-2', 
+                                                '2021-04-29-US-SJC-3'])]
+# %%
+base_test_df = base_test_df.drop(['latDeg_gt', 'lngDeg_gt'], axis=1)
+base_test_df
+
+# %%
+sample_df[['collectionName', 'phoneName']].drop_duplicates()
+
+# %%
+base_test_df[['collectionName', 'phoneName']].drop_duplicates()
+# %%
+print((sample_df[['collectionName', 'phoneName']].drop_duplicates() == base_test_df[['collectionName', 'phoneName']].drop_duplicates()).all().all())
 # %%

@@ -142,37 +142,39 @@ def train_cv(df_train, df_test, target, params):
         X_val = df_train.iloc[val_idx][feature_names]
         Y_val = df_train.iloc[val_idx][target]
 
-        # lgb_train = lgb.Dataset(X_train, Y_train)
-        # lgb_valid = lgb.Dataset(X_val, Y_val)
+        lgb_train = lgb.Dataset(X_train, Y_train)
+        lgb_valid = lgb.Dataset(X_val, Y_val)
 
-        model = lgb.LGBMRegressor(**params)
-        lgb_model = model.fit(X_train,
-                              Y_train,
-                              eval_names=['train', 'valid'],
-                              eval_set=[(X_train, Y_train), (X_val, Y_val)],
-                              verbose=0,
-                              eval_metric=params['metric'],
-                              early_stopping_rounds=params['early_stopping_rounds']
-                    )
+        # model = lgb.LGBMRegressor(**params)
+        # lgb_model = model.fit(X_train,
+        #                       Y_train,
+        #                       eval_names=['train', 'valid'],
+        #                       eval_set=[(X_train, Y_train), (X_val, Y_val)],
+        #                       verbose=0,
+        #                       eval_metric=params['metric'],
+        #                       early_stopping_rounds=params['early_stopping_rounds']
+        #             )
 
         # パラメータ探索
-        # best_params, tuning_history = dict(), list()
-        # model = lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
-        #                     verbose_eval=0,
-        #                     # best_params=best_params,
-        #                     # tuning_history=tuning_history
-        #             )
-        # best_params = model.params
-        # print('Best Params:', best_params)
-        # print('Tuning history:', tuning_history)
+        best_params, tuning_history = dict(), list()
+        model = lgb_o.train(params, lgb_train, valid_sets=lgb_valid,
+                            verbose_eval=0,
+                            # best_params=best_params,
+                            # tuning_history=tuning_history
+                    )
+        best_params = model.params
+        print('Best Params:', best_params)
+        print('Tuning history:', tuning_history)
 
         # 学習
-        # lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
+        lgb_model = lgb_o.train(best_params, lgb_train, valid_sets=lgb_valid)
 
         # 予測
         # AttributeError: 'Booster' object has no attribute 'best_iteration_'
-        pred_valid[val_idx] = lgb_model.predict(X_val, num_iteration = lgb_model.best_iteration_)
-        pred_test += lgb_model.predict(df_test[feature_names], num_iteration = lgb_model.best_iteration_)
+        pred_valid[val_idx] = lgb_model.predict(X_val, num_iteration = lgb_model.best_iteration)
+        pred_test += lgb_model.predict(df_test[feature_names], num_iteration = lgb_model.best_iteration)
+        # pred_valid[val_idx] = lgb_model.predict(X_val, num_iteration = lgb_model.best_iteration_)
+        # pred_test += lgb_model.predict(df_test[feature_names], num_iteration = lgb_model.best_iteration_)
 
         scores.append(lgb_model.best_score_['valid']['l2'])
         # models.append(model)
