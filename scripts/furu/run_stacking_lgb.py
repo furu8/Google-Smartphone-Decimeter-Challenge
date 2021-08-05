@@ -270,8 +270,15 @@ output = bl_tst_df[['phone', 'millisSinceGpsEpoch', 'latDeg', 'lngDeg']].copy()
 display(sub[sub['millisSinceGpsEpoch']!=output['millisSinceGpsEpoch']]) # 空だと良い
 output.to_csv(f'../../data/submission/imu_many_lat_lng_deg_lgb3_rf2_rr_.csv', index=False)
 # %%
-
 """
+member
+imu_rfm_maxdepth10_n100
+imu_rfm_maxdepth30_n100
+imu_lgbm_maxdepth_minus1_numleaves31
+imu_lgbm_maxdepth5_numleaves32
+imu_lgbm_maxdepth30_numleaves1024
+imu_ridge_alpha_0_7_maxiter300
+
 SJC
 dist_50: 2.8937154350445953
 dist_95: 9.766247142391551
@@ -284,3 +291,25 @@ dist_95: 8.8279213061084
 avg_dist_50_95: 5.587871772421713
 avg_dist: 3.096369958728955
 """
+
+"""
+member
+imu_rfm_maxdepth10_n100
+imu_rfm_maxdepth30_n100
+imu_lgbm_maxdepth_minus1_numleaves31
+imu_lgbm_maxdepth5_numleaves32
+imu_lgbm_maxdepth30_numleaves1024
+
+SJC
+dist_50: 2.987297968616397
+dist_95: 10.007618332900302
+avg_dist_50_95: 6.49745815075835
+avg_dist: 3.861887710966534
+
+MTV
+dist_50: 2.392893582426347
+dist_95: 9.044612869087993
+avg_dist_50_95: 5.718753225757171
+avg_dist: 3.178236714286315
+"""
+# %%
